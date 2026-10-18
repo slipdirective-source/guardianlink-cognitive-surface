@@ -1,0 +1,13 @@
+{
+  "name": "guardianlink-cognitive-surface",
+  "version": "0.1.0",
+  "description": "Human-facing cognitive surface for GuardianLink",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
