@@ -54,9 +54,9 @@
   },
   "ablations": {
     "A1": {
-      "restored": 1,
+      "restored": 2,
       "total": 2,
-      "meets_75pct": false
+      "meets_75pct": true
     },
     "A2": {
       "restored": 2,
