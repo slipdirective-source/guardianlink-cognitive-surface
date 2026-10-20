@@ -1,5 +1,10 @@
 // Uncertainty cross-cut: post-processing module, not a cluster.
-// Takes cluster outputs, computes weighted mean of uncertainty values.
+// In the rebuilt surface this actually runs across ALL lens outputs:
+// answer() passes every composed lens output here, derives source flags
+// from the outputs themselves, and returns both the combined value and
+// the source breakdown on the response. (In Experiment 001 it was called
+// with exactly one output and uncertaintySources() was never called —
+// the cross-cut was vacuous. That is fixed and covered by tests.)
 
 import { ClusterOutput } from "./types";
 
@@ -34,4 +39,38 @@ export function uncertaintySources(input: {
   if (input.sparse_history)
     sources.push({ name: "sparse_history", weight: 0.15, value: 0.6 });
   return sources;
+}
+
+// Cross-cut over a set of lens outputs: weighted combination of the mean
+// lens uncertainty and the derived source penalties. Sources are derived
+// from the outputs' own recorded signals (unknowns count, null trajectory
+// reasons, conflicting regularities), not re-guessed here.
+export function crossCutUncertainty(outputs: ClusterOutput[]): {
+  value: number;
+  sources: UncertaintySource[];
+} {
+  if (outputs.length === 0) return { value: 1.0, sources: [] };
+  const mean = computeUncertainty(outputs);
+
+  const anySignals = outputs.map((o) => o.signals as Record<string, unknown>);
+  const unknownsCount = Math.max(
+    0,
+    ...anySignals.map((s) => (Array.isArray(s["unknowns"]) ? (s["unknowns"] as unknown[]).length : 0))
+  );
+  const hasNullTrajectory = anySignals.some((s) => s["trajectory_null_reason"]);
+  const hasUrgent = anySignals.some((s) => s["urgent_action"]);
+
+  const sources = uncertaintySources({
+    ambiguous_input: unknownsCount >= 3,
+    missing_context: outputs.some((o) => o.evidence.raw.sovereign_context === null),
+    conflicting_signals: false,
+    low_confidence_tokens: false,
+    sparse_history: hasNullTrajectory,
+  });
+  // An urgent, obvious action is NOT uncertain even when its causes are:
+  // the cross-cut must not manufacture hesitation on Category 5 inputs.
+  if (hasUrgent) return { value: Math.min(mean, 0.2), sources };
+
+  const penalty = sources.reduce((acc, s) => acc + s.weight * s.value, 0) * 0.3;
+  return { value: Math.min(1, mean + penalty), sources };
 }
