@@ -1,0 +1,1 @@
+{"compilerOptions":{"lib":["ES2020","DOM","DOM.Iterable"],"outDir":"ui/.tsc-out","rootDir":".","types":["jest","node"]},"extends":"./tsconfig.json","include":["ui/src/**/*","src/**/*"]}
