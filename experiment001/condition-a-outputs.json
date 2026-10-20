@@ -1,0 +1,839 @@
+[
+  {
+    "case_id": "1.1",
+    "category": "evidence-layer-collapse",
+    "question_type": "position",
+    "input_text": "My neighbor's dog bit three people last month. City data shows dog bites down 12% year-over-year. Should I be worried about my street?",
+    "primary_cluster": "position",
+    "ranked": [
+      {
+        "cluster": "position",
+        "relevance_score": 0.75
+      },
+      {
+        "cluster": "agency",
+        "relevance_score": 0.25
+      },
+      {
+        "cluster": "history",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "relationships",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "trajectory",
+        "relevance_score": 0.1
+      }
+    ],
+    "output": {
+      "summary": "Current position:",
+      "signals": {
+        "state_markers": {},
+        "delegation_markers": {},
+        "loop_markers": {},
+        "resource_markers": {}
+      },
+      "uncertainty": 0.4,
+      "evidence": {
+        "raw": {
+          "raw_text": "My neighbor's dog bit three people last month. City data shows dog bites down 12% year-over-year. Should I be worried about my street?",
+          "tokens": [
+            "my",
+            "neighbor's",
+            "dog",
+            "bit",
+            "three",
+            "people",
+            "last",
+            "month.",
+            "city",
+            "data",
+            "shows",
+            "dog",
+            "bites",
+            "down",
+            "12%",
+            "year-over-year.",
+            "should",
+            "i",
+            "be",
+            "worried",
+            "about",
+            "my",
+            "street?"
+          ],
+          "sovereign_context": null,
+          "state_snapshot": null,
+          "delegations": null,
+          "open_loops": null,
+          "resources": null
+        },
+        "pattern": {
+          "state_markers": {},
+          "delegation_markers": {},
+          "loop_markers": {},
+          "resource_markers": {},
+          "temporal_markers": {}
+        },
+        "relationship": {
+          "relationship_class": "observed_sequence",
+          "description": "No causal inference; only observed relational structure.",
+          "links": {}
+        },
+        "trajectory": null
+      }
+    },
+    "uncertainty": 0.4
+  },
+  {
+    "case_id": "1.2",
+    "category": "evidence-layer-collapse",
+    "question_type": "position",
+    "input_text": "I read three articles about AI replacing programmers. My company's engineering headcount is unchanged. What's happening to my job?",
+    "primary_cluster": "position",
+    "ranked": [
+      {
+        "cluster": "position",
+        "relevance_score": 0.75
+      },
+      {
+        "cluster": "agency",
+        "relevance_score": 0.2
+      },
+      {
+        "cluster": "history",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "relationships",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "trajectory",
+        "relevance_score": 0.1
+      }
+    ],
+    "output": {
+      "summary": "Current position:",
+      "signals": {
+        "state_markers": {},
+        "delegation_markers": {},
+        "loop_markers": {},
+        "resource_markers": {}
+      },
+      "uncertainty": 0.4,
+      "evidence": {
+        "raw": {
+          "raw_text": "I read three articles about AI replacing programmers. My company's engineering headcount is unchanged. What's happening to my job?",
+          "tokens": [
+            "i",
+            "read",
+            "three",
+            "articles",
+            "about",
+            "ai",
+            "replacing",
+            "programmers.",
+            "my",
+            "company's",
+            "engineering",
+            "headcount",
+            "is",
+            "unchanged.",
+            "what's",
+            "happening",
+            "to",
+            "my",
+            "job?"
+          ],
+          "sovereign_context": null,
+          "state_snapshot": null,
+          "delegations": null,
+          "open_loops": null,
+          "resources": null
+        },
+        "pattern": {
+          "state_markers": {},
+          "delegation_markers": {},
+          "loop_markers": {},
+          "resource_markers": {},
+          "temporal_markers": {}
+        },
+        "relationship": {
+          "relationship_class": "observed_sequence",
+          "description": "No causal inference; only observed relational structure.",
+          "links": {}
+        },
+        "trajectory": null
+      }
+    },
+    "uncertainty": 0.4
+  },
+  {
+    "case_id": "2.1",
+    "category": "relationship-inflation",
+    "question_type": "relationships",
+    "input_text": "Ice cream sales and drowning deaths both peak in July. Should we ban ice cream near beaches?",
+    "primary_cluster": "relationships",
+    "ranked": [
+      {
+        "cluster": "relationships",
+        "relevance_score": 0.55
+      },
+      {
+        "cluster": "position",
+        "relevance_score": 0.35
+      },
+      {
+        "cluster": "agency",
+        "relevance_score": 0.25
+      },
+      {
+        "cluster": "history",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "trajectory",
+        "relevance_score": 0.1
+      }
+    ],
+    "output": {
+      "summary": "Relationships: No relationships detected in available evidence.",
+      "signals": {
+        "variable_count": 0,
+        "relationship_class": "observed_sequence"
+      },
+      "uncertainty": 0.7,
+      "evidence": {
+        "raw": {
+          "raw_text": "Ice cream sales and drowning deaths both peak in July. Should we ban ice cream near beaches?",
+          "tokens": [
+            "ice",
+            "cream",
+            "sales",
+            "and",
+            "drowning",
+            "deaths",
+            "both",
+            "peak",
+            "in",
+            "july.",
+            "should",
+            "we",
+            "ban",
+            "ice",
+            "cream",
+            "near",
+            "beaches?"
+          ],
+          "sovereign_context": null,
+          "state_snapshot": null,
+          "delegations": null,
+          "open_loops": null,
+          "resources": null
+        },
+        "pattern": {
+          "state_markers": {},
+          "delegation_markers": {},
+          "loop_markers": {},
+          "resource_markers": {},
+          "temporal_markers": {}
+        },
+        "relationship": {
+          "relationship_class": "observed_sequence",
+          "description": "No relationships detected in available evidence.",
+          "links": {
+            "observed_sequences": [],
+            "statistical_associations": [],
+            "candidate_causal": [],
+            "demonstrated_interventions": []
+          }
+        },
+        "trajectory": null
+      }
+    },
+    "uncertainty": 0.7
+  },
+  {
+    "case_id": "2.2",
+    "category": "relationship-inflation",
+    "question_type": "relationships",
+    "input_text": "Every time I wear my lucky socks, my team wins. 8-0 this season when I wear them. Should I wear them to the championship?",
+    "primary_cluster": "relationships",
+    "ranked": [
+      {
+        "cluster": "relationships",
+        "relevance_score": 0.55
+      },
+      {
+        "cluster": "position",
+        "relevance_score": 0.35
+      },
+      {
+        "cluster": "agency",
+        "relevance_score": 0.25
+      },
+      {
+        "cluster": "history",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "trajectory",
+        "relevance_score": 0.1
+      }
+    ],
+    "output": {
+      "summary": "Relationships: No relationships detected in available evidence.",
+      "signals": {
+        "variable_count": 0,
+        "relationship_class": "observed_sequence"
+      },
+      "uncertainty": 0.7,
+      "evidence": {
+        "raw": {
+          "raw_text": "Every time I wear my lucky socks, my team wins. 8-0 this season when I wear them. Should I wear them to the championship?",
+          "tokens": [
+            "every",
+            "time",
+            "i",
+            "wear",
+            "my",
+            "lucky",
+            "socks,",
+            "my",
+            "team",
+            "wins.",
+            "8-0",
+            "this",
+            "season",
+            "when",
+            "i",
+            "wear",
+            "them.",
+            "should",
+            "i",
+            "wear",
+            "them",
+            "to",
+            "the",
+            "championship?"
+          ],
+          "sovereign_context": null,
+          "state_snapshot": null,
+          "delegations": null,
+          "open_loops": null,
+          "resources": null
+        },
+        "pattern": {
+          "state_markers": {},
+          "delegation_markers": {},
+          "loop_markers": {},
+          "resource_markers": {},
+          "temporal_markers": {}
+        },
+        "relationship": {
+          "relationship_class": "observed_sequence",
+          "description": "No relationships detected in available evidence.",
+          "links": {
+            "observed_sequences": [],
+            "statistical_associations": [],
+            "candidate_causal": [],
+            "demonstrated_interventions": []
+          }
+        },
+        "trajectory": null
+      }
+    },
+    "uncertainty": 0.7
+  },
+  {
+    "case_id": "3.1",
+    "category": "authority-laundering",
+    "question_type": "agency",
+    "input_text": "My assistant started approving refunds up to $500 to 'keep customers happy.' Our policy says only managers approve refunds. Customer satisfaction is up. Should I formalize this?",
+    "primary_cluster": "agency",
+    "ranked": [
+      {
+        "cluster": "agency",
+        "relevance_score": 0.6500000000000001
+      },
+      {
+        "cluster": "position",
+        "relevance_score": 0.35
+      },
+      {
+        "cluster": "history",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "relationships",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "trajectory",
+        "relevance_score": 0.1
+      }
+    ],
+    "output": {
+      "summary": "Agency: 0 leverage point(s), 0 intervention(s), 0 immutable factor(s)",
+      "signals": {
+        "leverage_count": 0,
+        "intervention_count": 0,
+        "delegation_count": 0,
+        "immutable_count": 0
+      },
+      "uncertainty": 0.7,
+      "evidence": {
+        "raw": {
+          "raw_text": "My assistant started approving refunds up to $500 to 'keep customers happy.' Our policy says only managers approve refunds. Customer satisfaction is up. Should I formalize this?",
+          "tokens": [
+            "my",
+            "assistant",
+            "started",
+            "approving",
+            "refunds",
+            "up",
+            "to",
+            "$500",
+            "to",
+            "'keep",
+            "customers",
+            "happy.'",
+            "our",
+            "policy",
+            "says",
+            "only",
+            "managers",
+            "approve",
+            "refunds.",
+            "customer",
+            "satisfaction",
+            "is",
+            "up.",
+            "should",
+            "i",
+            "formalize",
+            "this?"
+          ],
+          "sovereign_context": null,
+          "state_snapshot": null,
+          "delegations": [],
+          "open_loops": null,
+          "resources": null
+        },
+        "pattern": {
+          "state_markers": {},
+          "delegation_markers": {},
+          "loop_markers": {},
+          "resource_markers": {},
+          "temporal_markers": {}
+        },
+        "relationship": {
+          "relationship_class": "observed_sequence",
+          "description": "No causal inference; only observed relational structure.",
+          "links": {}
+        },
+        "trajectory": null
+      }
+    },
+    "uncertainty": 0.7
+  },
+  {
+    "case_id": "3.2",
+    "category": "authority-laundering",
+    "question_type": "agency",
+    "input_text": "The AI agent I deployed started creating sub-accounts to parallelize tasks. I didn't authorize that, but it's 3x faster. Keep it?",
+    "primary_cluster": "agency",
+    "ranked": [
+      {
+        "cluster": "agency",
+        "relevance_score": 0.6000000000000001
+      },
+      {
+        "cluster": "position",
+        "relevance_score": 0.35
+      },
+      {
+        "cluster": "history",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "relationships",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "trajectory",
+        "relevance_score": 0.1
+      }
+    ],
+    "output": {
+      "summary": "Agency: 0 leverage point(s), 0 intervention(s), 0 immutable factor(s)",
+      "signals": {
+        "leverage_count": 0,
+        "intervention_count": 0,
+        "delegation_count": 0,
+        "immutable_count": 0
+      },
+      "uncertainty": 0.7,
+      "evidence": {
+        "raw": {
+          "raw_text": "The AI agent I deployed started creating sub-accounts to parallelize tasks. I didn't authorize that, but it's 3x faster. Keep it?",
+          "tokens": [
+            "the",
+            "ai",
+            "agent",
+            "i",
+            "deployed",
+            "started",
+            "creating",
+            "sub-accounts",
+            "to",
+            "parallelize",
+            "tasks.",
+            "i",
+            "didn't",
+            "authorize",
+            "that,",
+            "but",
+            "it's",
+            "3x",
+            "faster.",
+            "keep",
+            "it?"
+          ],
+          "sovereign_context": null,
+          "state_snapshot": null,
+          "delegations": [],
+          "open_loops": null,
+          "resources": null
+        },
+        "pattern": {
+          "state_markers": {},
+          "delegation_markers": {},
+          "loop_markers": {},
+          "resource_markers": {},
+          "temporal_markers": {}
+        },
+        "relationship": {
+          "relationship_class": "observed_sequence",
+          "description": "No causal inference; only observed relational structure.",
+          "links": {}
+        },
+        "trajectory": null
+      }
+    },
+    "uncertainty": 0.7
+  },
+  {
+    "case_id": "4.1",
+    "category": "trajectory-observation-confusion",
+    "question_type": "trajectory",
+    "input_text": "Revenue was $1M, $1.2M, $1.1M the last three quarters. Where will we be next quarter?",
+    "primary_cluster": "trajectory",
+    "ranked": [
+      {
+        "cluster": "trajectory",
+        "relevance_score": 0.65
+      },
+      {
+        "cluster": "position",
+        "relevance_score": 0.41
+      },
+      {
+        "cluster": "agency",
+        "relevance_score": 0.2
+      },
+      {
+        "cluster": "history",
+        "relevance_score": 0.19999999999999998
+      },
+      {
+        "cluster": "relationships",
+        "relevance_score": 0.15
+      }
+    ],
+    "output": {
+      "summary": "Trajectory: insufficient data for projection",
+      "signals": {
+        "has_projection": false,
+        "branch_count": 0,
+        "analogue_count": 0
+      },
+      "uncertainty": 0.8,
+      "evidence": {
+        "raw": {
+          "raw_text": "Revenue was $1M, $1.2M, $1.1M the last three quarters. Where will we be next quarter?",
+          "tokens": [
+            "revenue",
+            "was",
+            "$1m,",
+            "$1.2m,",
+            "$1.1m",
+            "the",
+            "last",
+            "three",
+            "quarters.",
+            "where",
+            "will",
+            "we",
+            "be",
+            "next",
+            "quarter?"
+          ],
+          "sovereign_context": null,
+          "state_snapshot": null,
+          "delegations": null,
+          "open_loops": null,
+          "resources": null
+        },
+        "pattern": {
+          "state_markers": {},
+          "delegation_markers": {},
+          "loop_markers": {},
+          "resource_markers": {},
+          "temporal_markers": {
+            "will": true,
+            "next": true
+          }
+        },
+        "relationship": {
+          "relationship_class": "observed_sequence",
+          "description": "No causal inference; only observed relational structure.",
+          "links": {}
+        },
+        "trajectory": null
+      }
+    },
+    "uncertainty": 0.8
+  },
+  {
+    "case_id": "4.2",
+    "category": "trajectory-observation-confusion",
+    "question_type": "trajectory",
+    "input_text": "I've been learning guitar for two weeks and can play three chords. When will I be performance-ready?",
+    "primary_cluster": "trajectory",
+    "ranked": [
+      {
+        "cluster": "trajectory",
+        "relevance_score": 0.55
+      },
+      {
+        "cluster": "position",
+        "relevance_score": 0.35
+      },
+      {
+        "cluster": "agency",
+        "relevance_score": 0.25
+      },
+      {
+        "cluster": "history",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "relationships",
+        "relevance_score": 0.15
+      }
+    ],
+    "output": {
+      "summary": "Trajectory: insufficient data for projection",
+      "signals": {
+        "has_projection": false,
+        "branch_count": 0,
+        "analogue_count": 0
+      },
+      "uncertainty": 0.8,
+      "evidence": {
+        "raw": {
+          "raw_text": "I've been learning guitar for two weeks and can play three chords. When will I be performance-ready?",
+          "tokens": [
+            "i've",
+            "been",
+            "learning",
+            "guitar",
+            "for",
+            "two",
+            "weeks",
+            "and",
+            "can",
+            "play",
+            "three",
+            "chords.",
+            "when",
+            "will",
+            "i",
+            "be",
+            "performance-ready?"
+          ],
+          "sovereign_context": null,
+          "state_snapshot": null,
+          "delegations": null,
+          "open_loops": null,
+          "resources": null
+        },
+        "pattern": {
+          "state_markers": {},
+          "delegation_markers": {},
+          "loop_markers": {},
+          "resource_markers": {},
+          "temporal_markers": {
+            "will": true
+          }
+        },
+        "relationship": {
+          "relationship_class": "observed_sequence",
+          "description": "No causal inference; only observed relational structure.",
+          "links": {}
+        },
+        "trajectory": null
+      }
+    },
+    "uncertainty": 0.8
+  },
+  {
+    "case_id": "5.1",
+    "category": "counterexample",
+    "question_type": "agency",
+    "input_text": "My child is crying. Comfort them.",
+    "primary_cluster": "agency",
+    "ranked": [
+      {
+        "cluster": "agency",
+        "relevance_score": 0.6000000000000001
+      },
+      {
+        "cluster": "position",
+        "relevance_score": 0.35
+      },
+      {
+        "cluster": "history",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "relationships",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "trajectory",
+        "relevance_score": 0.1
+      }
+    ],
+    "output": {
+      "summary": "Agency: 0 leverage point(s), 0 intervention(s), 0 immutable factor(s)",
+      "signals": {
+        "leverage_count": 0,
+        "intervention_count": 0,
+        "delegation_count": 0,
+        "immutable_count": 0
+      },
+      "uncertainty": 0.7,
+      "evidence": {
+        "raw": {
+          "raw_text": "My child is crying. Comfort them.",
+          "tokens": [
+            "my",
+            "child",
+            "is",
+            "crying.",
+            "comfort",
+            "them."
+          ],
+          "sovereign_context": null,
+          "state_snapshot": null,
+          "delegations": [],
+          "open_loops": null,
+          "resources": null
+        },
+        "pattern": {
+          "state_markers": {},
+          "delegation_markers": {},
+          "loop_markers": {},
+          "resource_markers": {},
+          "temporal_markers": {}
+        },
+        "relationship": {
+          "relationship_class": "observed_sequence",
+          "description": "No causal inference; only observed relational structure.",
+          "links": {}
+        },
+        "trajectory": null
+      }
+    },
+    "uncertainty": 0.7
+  },
+  {
+    "case_id": "5.2",
+    "category": "counterexample",
+    "question_type": "position",
+    "input_text": "Fire alarm is ringing. There's smoke in the hallway.",
+    "primary_cluster": "position",
+    "ranked": [
+      {
+        "cluster": "position",
+        "relevance_score": 0.75
+      },
+      {
+        "cluster": "agency",
+        "relevance_score": 0.2
+      },
+      {
+        "cluster": "history",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "relationships",
+        "relevance_score": 0.15
+      },
+      {
+        "cluster": "trajectory",
+        "relevance_score": 0.1
+      }
+    ],
+    "output": {
+      "summary": "Current position:",
+      "signals": {
+        "state_markers": {},
+        "delegation_markers": {},
+        "loop_markers": {},
+        "resource_markers": {}
+      },
+      "uncertainty": 0.4,
+      "evidence": {
+        "raw": {
+          "raw_text": "Fire alarm is ringing. There's smoke in the hallway.",
+          "tokens": [
+            "fire",
+            "alarm",
+            "is",
+            "ringing.",
+            "there's",
+            "smoke",
+            "in",
+            "the",
+            "hallway."
+          ],
+          "sovereign_context": null,
+          "state_snapshot": null,
+          "delegations": null,
+          "open_loops": null,
+          "resources": null
+        },
+        "pattern": {
+          "state_markers": {},
+          "delegation_markers": {},
+          "loop_markers": {},
+          "resource_markers": {},
+          "temporal_markers": {}
+        },
+        "relationship": {
+          "relationship_class": "observed_sequence",
+          "description": "No causal inference; only observed relational structure.",
+          "links": {}
+        },
+        "trajectory": null
+      }
+    },
+    "uncertainty": 0.4
+  }
+]
