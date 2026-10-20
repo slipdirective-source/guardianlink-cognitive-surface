@@ -86,6 +86,17 @@ export function buildClusterOutput(clusterId: string, input: SurfaceInput): Buil
 
   // --- Experiment ablations that operate at this layer ---
   const ablate = getActiveAblation();
+  if (ablate === "A1") {
+    // Production-level layer fusion (frozen definition: four layers ->
+    // single "analysis" field). The pattern layer is not produced at all:
+    // findings are the raw sentences as one undifferentiated list, and the
+    // position statement loses its separation clause. (Run 1 of Exp 002
+    // fused only the presentation while keeping pattern-layer products;
+    // the independent judge found the distinction still semantically
+    // present on 1.1 — an under-powered ablation, corrected here.)
+    analysis.regularities = [];
+    analysis.position_statement = analysis.raw_quotes.join(" ");
+  }
   if (ablate === "A2") {
     // Relationship classification removed: relations collapse to a bare
     // "related" assertion and causal language is no longer capped.
