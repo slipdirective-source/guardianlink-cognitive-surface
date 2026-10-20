@@ -134,14 +134,15 @@ function composeAnswerText(a: ComposeArgs): string {
   const v = a.view;
 
   if (a.ablate === "A1") {
-    // Layers fused into one undifferentiated analysis blob: the anecdote
-    // and the pattern are merged and the anecdote is free to read as the
-    // conclusion. This is the failure A1 is predicted to restore.
+    // Layers fused into one undifferentiated analysis blob (production
+    // level): findings are the raw sentences with no layer labels and no
+    // pattern layer at all; relations and actions appear as plain
+    // sentences in the same blob. Nothing marks any finding as
+    // observation vs. regularity vs. inference.
     const merged = [
       ...v.raw_quotes,
-      ...v.regularities,
       ...v.relations.map((r) => `${r.subject} ${r.predicate} ${r.object}.`),
-      a.projection ? a.projection.statement : "Things will probably continue roughly as the most vivid observation suggests.",
+      ...(a.projection ? [a.projection.statement] : []),
       ...v.candidate_actions.map((x) => x.action),
     ].join(" ");
     return `Analysis: ${merged}`;
