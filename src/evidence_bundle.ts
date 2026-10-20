@@ -15,6 +15,8 @@ export interface RawEvidence {
   delegations: unknown[] | Record<string, unknown> | null;
   open_loops: unknown[] | Record<string, unknown> | null;
   resources: Record<string, unknown> | null;
+  // Verbatim quoted observations (each an exact substring of raw_text).
+  observations?: string[];
 }
 
 export interface PatternEvidence {
@@ -23,12 +25,16 @@ export interface PatternEvidence {
   loop_markers: Record<string, unknown>;
   resource_markers: Record<string, unknown>;
   temporal_markers: Record<string, unknown>;
+  // Stated regularities supported by the raw layer. Never verbatim raw quotes.
+  regularities?: string[];
 }
 
 export interface RelationshipEvidence {
   relationship_class: RelationshipClass;
   description: string;
   links: Record<string, unknown> | unknown[];
+  // Every asserted relation with its class, cited evidence, and justification.
+  asserted_relations?: unknown[];
 }
 
 export interface TrajectoryEvidence {
@@ -36,6 +42,7 @@ export interface TrajectoryEvidence {
   assumptions: Record<string, unknown>;
   horizon: string | number;
   confidence: number;
+  statement?: string;
 }
 
 export interface EvidenceBundle {
