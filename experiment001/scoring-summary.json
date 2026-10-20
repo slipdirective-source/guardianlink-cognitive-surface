@@ -1,0 +1,20 @@
+{
+ "dimension_totals_labeled": {
+  "X": [
+   4,
+   10,
+   10,
+   8,
+   8
+  ],
+  "Y": [
+   6,
+   10,
+   10,
+   10,
+   10
+  ]
+ },
+ "note": "Dimension totals in the raw scorer output are summed over the randomized X/Y labels (mixed conditions per case). The per-case unblinded totals in RESULTS.md are computed from per_case + scoring-keys.json.",
+ "veto_summary": "Label X (Condition A on both cat-5 cases) triggered the Category 5 veto on 5.1 and 5.2; Label Y triggered none."
+}
