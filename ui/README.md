@@ -59,6 +59,44 @@ npm run smoke:ui     # jsdom: boots the bundle, loads fixture 5.1, switches lens
   cannot distinguish (unknowns), lacks evidence (incl. the explicit
   trajectory null reason).
 
+## Ingestion — decided policy (2026-10-21)
+
+**Decision:** entries enter the record through one capture layer (the
+entry form in the UI, `submitEntry` in `ui/src/app.ts`), and the
+capture layer — never the entry's own content — stamps three boundary
+facts on every entry: **kind** (`question` | `observation`), **origin**
+(`manual_entry` | `sovereign_dictation` | `fixture` | `import`), and
+**timestamp** (`at`, taken when the entry is admitted). Content that
+claims a different source or time is recorded as content, verbatim,
+and moves nothing.
+
+**What the pipeline is allowed to assume about an entry:** exactly
+that a stated source produced this text at the stamped time. An entry
+is a *claim from its stamped source*, admitted to the **raw layer
+only**. Ingestion confers no pattern, relationship, or trajectory
+status — layer promotion is the pipeline's work, under the validator's
+ceilings, exactly as for any other input. The stamps are **provenance,
+not verification**: the system records who said it and when; it does
+not thereby believe it. A dictated observation and a typed one carry
+the same epistemic weight — none beyond raw.
+
+**Entry kinds:** a *question* is put to its lens; an *observation* is
+a statement admitted as position evidence (the position lens reads
+"where am I?" over the stated fact). Both flow through `answer()`
+identically — there is no side channel for observations.
+
+**Legacy entries:** exports that predate the stamps can still be
+imported; an entry without stamps is stamped `origin: import` on
+admission (its capture was not witnessed here) and `kind: question`.
+Entries that carry stamps keep them — the stamp belongs to the entry,
+not to the file it traveled in.
+
+_Sprint "trust at the edges", item 1 (Caleb, 2026-10-21). Pinned by
+`ui/src/ingestion.test.ts`: hostile content claiming a forged
+source/timestamp lands in the text only, both kinds produce full
+multi-lens responses, the form's controls never live inside a gated
+action node._
+
 ## Record persistence — decided policy (2026-10-21)
 
 **Decision:** the record lives **in memory only**. Persistence happens
