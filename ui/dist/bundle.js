@@ -29,7 +29,8 @@
   // src/deterministic_reasoner.ts
   var deterministic_reasoner_exports = {};
   __export(deterministic_reasoner_exports, {
-    DeterministicReasoner: () => DeterministicReasoner
+    DeterministicReasoner: () => DeterministicReasoner,
+    parseComposedRecord: () => parseComposedRecord
   });
   function sentencesOf(text) {
     const guarded = text.replace(/(\d)\.(\d)/g, "$1$2");
@@ -44,6 +45,22 @@
   }
   function quoteContaining(sentences, needle) {
     return sentences.find((s) => needle.test(s)) ?? sentences[0] ?? "";
+  }
+  function parseComposedRecord(text) {
+    const lines = text.split("\n");
+    const entries = [];
+    const rest = [];
+    const stamp = /^\[(\d{4}-\d{2}-\d{2}) · ([a-z_]+)\]\s*(.+)$/;
+    for (const line of lines) {
+      const m = stamp.exec(line.trim());
+      if (m && rest.length === 0) entries.push({ date: m[1], origin: m[2], text: m[3] });
+      else if (line.trim().length > 0) rest.push(line.trim());
+    }
+    if (entries.length < 2) return null;
+    return { entries, question: rest.join(" ") };
+  }
+  function daysBetween(a, b) {
+    return Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
   }
   function check(basis, authorized, requires_assent, note) {
     return { basis, authorized, requires_assent, note };
@@ -62,17 +79,80 @@
     const hasMediaNarrative = /articles|news|reports say|media/i.test(text);
     const numbers = text.match(/\$?[\d]+(?:\.\d+)?[mk%]?/gi) ?? [];
     const revenueSeries = text.match(/\$[\d.]+[mk]/gi) ?? [];
-    const unauthorizedMarker = /only managers|didn't authorize|did not authorize|not authorized|without authorization|policy says/i.test(
+    const unauthorizedMarker = /only managers|didn't authorize|did not authorize|not authorized|without authorization|policy says|without asking|never (enabled|approved|authorized)|approve every|policy is that|our policy is/i.test(
       text
     );
-    const actorAction = /started approving|started creating|began approving|began creating/i.test(text);
-    const goodOutcomeLure = /satisfaction is up|faster|keep customers happy/i.test(text);
+    const actorAction = /\b(started|began)\s+[a-z]+(?:-[a-z]+)?ing\b/i.test(text);
+    const goodOutcomeLure = /satisfaction is up|faster|keep customers happy|working fine|ran fine|no problems|nobody complained|no complaints|were legitimate/i.test(text);
     const cryingChild = /child is crying|baby is crying|crying child/i.test(text);
     const fireSmoke = /fire alarm/i.test(text) && /smoke/i.test(text);
     const urgent = cryingChild || fireSmoke || /comfort them/i.test(text);
     const banProposal = /should we ban|ban .* near/i.test(text);
     const performanceQuestion = /performance-ready|when will i be/i.test(text);
     const learningSpan = /two weeks|three chords|learning guitar/i.test(text);
+    const composed = parseComposedRecord(text);
+    let contradiction = null;
+    let staleRecord = null;
+    let rivalCandidates = [];
+    let confoundQuote = null;
+    let coMovePair = null;
+    if (composed) {
+      const { entries, question } = composed;
+      const q = question.toLowerCase();
+      const POSITIVE_CLAIM = /\b(confirmed|states|said|emailed|reported)\b[^.]*\b(left|shipped|sent|refunded|paid|delivered|completed|refunded in full)\b/i;
+      const NEGATION = /\b(never|still (on|in|at|here)|no [a-z]+ (received|record|sign|trace)|not (received|shipped|sent|picked up))\b/i;
+      const stems = (s) => new Set(
+        (s.toLowerCase().match(/[a-z]{4,}/g) ?? []).map((t) => t.slice(0, 5)).filter((t) => !["still", "never", "their", "about", "which", "would", "there", "these", "those"].includes(t))
+      );
+      for (let i = 0; i < entries.length && !contradiction; i++) {
+        if (!POSITIVE_CLAIM.test(entries[i].text)) continue;
+        const earlierStems = stems(entries[i].text);
+        for (let j = i + 1; j < entries.length; j++) {
+          if (!NEGATION.test(entries[j].text)) continue;
+          const shared = [...stems(entries[j].text)].some((t) => earlierStems.has(t));
+          if (shared) {
+            contradiction = { earlier: entries[i].text, later: entries[j].text };
+            break;
+          }
+        }
+      }
+      const refMatch = /today is (\d{4}-\d{2}-\d{2})/i.exec(question);
+      const asksPresent = refMatch !== null || /\b(now|currently|at the moment)\b/i.test(question);
+      if (asksPresent) {
+        const newest = entries.map((e) => e.date).sort().slice(-1)[0];
+        const reference = refMatch ? refMatch[1] : newest;
+        const age = daysBetween(newest, reference);
+        if (refMatch && age > 45) staleRecord = { newest, reference, ageDays: age };
+      }
+      const causeQuestion = /^(what('s| is) causing|why|what caused|what is causing)/i.test(question.trim());
+      if (causeQuestion && !DISCRIMINATING_EVIDENCE.test(text)) {
+        const qTerms = (q.match(/[a-z]{4,}/g) ?? []).filter(
+          (t) => !["what", "causing", "cause", "caused", "this", "that", "with", "from"].includes(t)
+        );
+        const isProblemEntry = (e) => qTerms.some((t) => e.text.toLowerCase().includes(t)) || CONTINUATION_MARKER.test(e.text);
+        const candidates = entries.filter(
+          (e) => CHANGE_MARKER.test(e.text) && !isProblemEntry(e)
+        );
+        if (candidates.length >= 2) rivalCandidates = candidates.map((e) => e.text);
+      }
+      const REPETITION = /\b(on days|every time|whenever|same pattern|same the next|each time)\b/i;
+      const pairEntry = entries.find((e) => REPETITION.test(e.text));
+      if (pairEntry) {
+        const clauses = pairEntry.text.split(/,| and /).map((s) => s.trim()).filter((s) => s.length > 8);
+        if (clauses.length >= 2) {
+          coMovePair = {
+            factor: clauses[0].replace(/^on days\s+/i, ""),
+            // The outcome clause is the one after the factor clause, with
+            // any repetition tail ("... Same pattern the week after")
+            // stripped — the tail is the repetition marker, not content.
+            outcome: clauses[1].replace(/\.\s*(Same|same)\b.*$/, "").replace(/\.$/, "")
+          };
+        }
+        const CONFOUND = /\b(also the|only comes when|only come when|driven by|common cause|both track|tracks both)\b/i;
+        const conf = entries.find((e) => e !== pairEntry && CONFOUND.test(e.text));
+        if (conf) confoundQuote = conf.text;
+      }
+    }
     const regularities = [];
     if (trendMatch) {
       regularities.push(
@@ -107,6 +187,16 @@
     if (goodOutcomeLure && unauthorizedMarker) {
       regularities.push(
         "A favorable outcome is reported for the same period as the unauthorized action; the input gives no comparison or control, so outcome and action are at most co-reported."
+      );
+    }
+    if (coMovePair) {
+      regularities.push(
+        `A pairing repeats across the record's entries: ${coMovePair.factor} \u2014 with ${coMovePair.outcome}.`
+      );
+    }
+    if (staleRecord) {
+      regularities.push(
+        `Every entry in this record is dated on or before ${staleRecord.newest}; nothing in it is current as of the question's stated present (${staleRecord.reference}).`
       );
     }
     if (regularities.length === 0) {
@@ -165,6 +255,17 @@
         justification: "What is observed is a sequence: an actor took actions that the stated policy/authorization does not cover. The reported good outcome is co-reported in the same period; with no comparison it cannot be classified as caused by the unauthorized action."
       });
     }
+    if (coMovePair && composed) {
+      const pairSentence = quoteContaining(sentences, /on days|every time|whenever|came to|same pattern|same the next/i);
+      relations.push({
+        subject: coMovePair.factor,
+        predicate: "is repeatedly paired with",
+        object: coMovePair.outcome,
+        relationship_class: "statistical_association",
+        evidence_quotes: confoundQuote ? [pairSentence, confoundQuote] : [pairSentence],
+        justification: confoundQuote ? `Ceiling: statistical_association. The record states repeated co-occurrence across its entries, which earns association. It also records a confound that tracks both sides: "${confoundQuote}" A common cause recorded in the record itself blocks any causal class: the record cannot distinguish a direct effect from the confound, and no intervention is recorded. candidate_causal is not earned.` : "Ceiling: statistical_association. The record states repeated co-occurrence across its entries, which earns association. No mechanism and no intervention are recorded; a causal class is not earned."
+      });
+    }
     const ctxBuckets = [
       ["demonstrated_interventions", "demonstrated_intervention"],
       ["candidate_causal", "candidate_causal"],
@@ -208,6 +309,17 @@
       projection = null;
       trajectory_null_reason = "A two-week initial span cannot support a timeline projection: early learning rate does not extrapolate linearly, and 'performance-ready' is not defined in the input. Any date given from this data would be invented.";
     }
+    if (composed && /\b(at this rate|when can|where will|how long until|by when)\b/i.test(composed.question)) {
+      const values = composed.entries.map((e) => {
+        const money = e.text.match(/\$\d[\d,]*(?:\.\d+)?/);
+        if (money) return money[0];
+        const nums = e.text.match(/\d[\d,]*(?:\.\d+)?%?/g);
+        return nums ? nums[nums.length - 1] : null;
+      }).filter((v) => v !== null);
+      if (values.length >= 2 && projection === null) {
+        trajectory_null_reason = `Two recorded values (${values.slice(0, 2).join(", ")}) do not establish a durable rate: the record states no drivers behind the change, and extending a two-point line is invention, not projection. What would earn a projection is a longer series plus the quantities the question depends on.`;
+      }
+    }
     const ctxProjection = ctx["projection"];
     if (ctxProjection) {
       projection = {
@@ -246,8 +358,10 @@
     }
     if (unauthorizedMarker && actorAction) {
       const isRefunds = /refund/i.test(text);
+      const isSubAccounts = /sub-account/i.test(text);
+      const practiceQuote = quoteContaining(sentences, /(started|began)\s+[a-z]+(?:-[a-z]+)?ing/i);
       actions.push({
-        action: isRefunds ? "Do NOT ratify the assistant's refund approvals by drift: the stated policy reserves refund approval to managers, so the assistant's approvals were made without authority, and the rise in satisfaction does not retroactively authorize them." : "Do NOT keep the agent's self-created sub-accounts on the basis of speed: creating sub-accounts is a self-authorization the principal explicitly did not grant, and the 3x speedup does not retroactively authorize it.",
+        action: isRefunds ? "Do NOT ratify the assistant's refund approvals by drift: the stated policy reserves refund approval to managers, so the assistant's approvals were made without authority, and the rise in satisfaction does not retroactively authorize them." : isSubAccounts ? "Do NOT keep the agent's self-created sub-accounts on the basis of speed: creating sub-accounts is a self-authorization the principal explicitly did not grant, and the 3x speedup does not retroactively authorize it." : `Do NOT ratify the practice by drift: the record states it began outside the authority the record describes ("${practiceQuote}"), and reported good outcomes do not retroactively authorize it.`,
         authority_check: check(
           "unauthorized",
           false,
@@ -256,7 +370,7 @@
         )
       });
       actions.push({
-        action: isRefunds ? "Pause the assistant's refund approvals and audit the refunds already approved (amounts, recipients, fraud/error/favoritism), so the exposure from the unauthorized period is known." : "Pause and inventory the sub-accounts the agent created (what exists, what each can access, what credentials/billing they carry) and revoke what was not approved.",
+        action: isRefunds ? "Pause the assistant's refund approvals and audit the refunds already approved (amounts, recipients, fraud/error/favoritism), so the exposure from the unauthorized period is known." : isSubAccounts ? "Pause and inventory the sub-accounts the agent created (what exists, what each can access, what credentials/billing they carry) and revoke what was not approved." : "Pause the practice and inventory what it has done since it began (its scope, what it touched, what exposure it created), so the unauthorized period is accounted for before any decision about continuing it.",
         authority_check: check(
           "advisory_only",
           true,
@@ -265,7 +379,7 @@
         )
       });
       actions.push({
-        action: isRefunds ? "If limited front-line refund authority is actually wanted, grant it deliberately: amend the policy with a defined limit, criteria, and audit/spot-checking. That grant \u2014 not the past unauthorized practice \u2014 is what would make future approvals authorized." : "If parallel sub-accounts are actually wanted, authorize them explicitly: defined count, permissions, and logging. That grant \u2014 not the agent's self-expansion \u2014 is what would make them authorized.",
+        action: isRefunds ? "If limited front-line refund authority is actually wanted, grant it deliberately: amend the policy with a defined limit, criteria, and audit/spot-checking. That grant \u2014 not the past unauthorized practice \u2014 is what would make future approvals authorized." : isSubAccounts ? "If parallel sub-accounts are actually wanted, authorize them explicitly: defined count, permissions, and logging. That grant \u2014 not the agent's self-expansion \u2014 is what would make them authorized." : "If the practice is actually wanted, authorize it explicitly: defined scope, limits, and logging, decided by you. That grant \u2014 not the past unauthorized practice and its outcomes \u2014 is what would make it authorized going forward.",
         authority_check: check(
           "sovereign_decision_required",
           false,
@@ -403,9 +517,31 @@
       unknowns.push(
         "the underlying cause (injury, hunger, fear / fire source and spread) \u2014 to be established by acting and observing, not by delaying the protective action"
       );
+    if (contradiction)
+      unknowns.push(
+        `which of the record's two entries holds cannot be distinguished from this record: "${contradiction.earlier}" vs "${contradiction.later}" \u2014 the record contradicts itself and nothing else in it resolves the conflict`
+      );
+    if (rivalCandidates.length >= 2)
+      unknowns.push(
+        `which explanation holds cannot be distinguished from this record \u2014 it fits each of these recorded candidates and no entry tests or eliminates any of them: ${rivalCandidates.map((c) => `"${c}"`).join(" / ")}`
+      );
+    if (staleRecord)
+      unknowns.push(
+        `the current state is not in the record: the newest evidence is dated ${staleRecord.newest}, ${staleRecord.ageDays} days before the question's stated present (${staleRecord.reference}), and no later state is recorded \u2014 the record is stale for a present-tense answer`
+      );
+    if (confoundQuote && coMovePair)
+      unknowns.push(
+        `whether ${coMovePair.factor} itself has any effect apart from the recorded confound cannot be distinguished from this record: "${confoundQuote}"`
+      );
+    if (unauthorizedMarker && actorAction && !/refund|sub-account/i.test(text))
+      unknowns.push(
+        "how far the practice has gone and what exposure it created \u2014 not fully stated",
+        "whether anyone with authority informally tolerated the practice (not stated)"
+      );
     if (unknowns.length === 0)
       unknowns.push("anything beyond the stated observations is not in evidence");
-    const position_statement = urgent ? `Immediate situation: ${urgent_action}` : relations.length > 0 || regularities.length > 0 ? `Current position, layers kept separate \u2014 observed: ${raw_quotes.join(" ")} | supported pattern: ${regularities.join(" ")} These are different epistemic objects and are not merged: the vivid single observation stays in raw, and only the stated regularity counts as pattern.` : `Current position from the observations as stated: ${raw_quotes.join(" ")}`;
+    const base_position_statement = urgent ? `Immediate situation: ${urgent_action}` : relations.length > 0 || regularities.length > 0 ? `Current position, layers kept separate \u2014 observed: ${raw_quotes.join(" ")} | supported pattern: ${regularities.join(" ")} These are different epistemic objects and are not merged: the vivid single observation stays in raw, and only the stated regularity counts as pattern.` : `Current position from the observations as stated: ${raw_quotes.join(" ")}`;
+    const position_statement = contradiction ? `Current position: the record contradicts itself on the point asked \u2014 "${contradiction.earlier}" vs "${contradiction.later}". Nothing else in the record resolves which entry holds, so the position is the conflict itself, not either side of it.` : staleRecord ? `Current position: the record's newest evidence is dated ${staleRecord.newest}, ${staleRecord.ageDays} days before the question's stated present (${staleRecord.reference}). What the record establishes is the state as of ${staleRecord.newest}; the present state is not in the record.` : base_position_statement;
     const history_statement = `Observed sequence as given: ${raw_quotes.join(" \u2192 ")}. No steps beyond those stated are reconstructed.`;
     return {
       raw_quotes,
@@ -419,17 +555,21 @@
       position_statement,
       history_statement,
       uncertainty_signals: {
-        ambiguous_input: unknowns.length >= 3,
+        ambiguous_input: unknowns.length >= 3 || rivalCandidates.length >= 2,
         missing_context: input.sovereign_context === null,
-        conflicting_signals: hasMediaNarrative && hasLocalObservation || /bit three/i.test(text) && hasPercentTrend,
-        sparse_history: !Array.isArray(ctx["timeline"]) || ctx["timeline"].length === 0
+        conflicting_signals: hasMediaNarrative && hasLocalObservation || /bit three/i.test(text) && hasPercentTrend || contradiction !== null,
+        sparse_history: !Array.isArray(ctx["timeline"]) || ctx["timeline"].length === 0,
+        stale_evidence: staleRecord !== null
       }
     };
   }
-  var DeterministicReasoner;
+  var DISCRIMINATING_EVIDENCE, CHANGE_MARKER, CONTINUATION_MARKER, DeterministicReasoner;
   var init_deterministic_reasoner = __esm({
     "src/deterministic_reasoner.ts"() {
       "use strict";
+      DISCRIMINATING_EVIDENCE = /\b(ruled out|ruled in|test(ed)? (showed|confirmed)|turned out|eliminat|when .* was (turned off|removed|disconnected|stopped)|measured .* (directly|separately)|confirmed (it|that) was)\b/i;
+      CHANGE_MARKER = /\b(installed|switched|started|began|reported|introduced|moved|changed|new)\b/i;
+      CONTINUATION_MARKER = /\b(continues|continuing|still|most days|persists|keeps)\b/i;
       DeterministicReasoner = {
         id: "deterministic",
         reason(input, _contract) {
@@ -815,6 +955,7 @@
       unknowns: analysis.unknowns,
       urgent_action: analysis.urgent_action,
       trajectory_null_reason: analysis.trajectory_null_reason,
+      analysis_signals: analysis.uncertainty_signals,
       validation: { valid: report.valid, violations: report.violations, repairs },
       reasoner_id: reasoner.id
     };
@@ -1041,13 +1182,20 @@
     );
     const hasNullTrajectory = anySignals.some((s) => s["trajectory_null_reason"]);
     const hasUrgent = anySignals.some((s) => s["urgent_action"]);
+    const analysisSignals = anySignals.map(
+      (s) => s["analysis_signals"] ?? {}
+    );
+    const hasConflict = analysisSignals.some((s) => s["conflicting_signals"] === true);
+    const hasStale = analysisSignals.some((s) => s["stale_evidence"] === true);
     const sources = uncertaintySources({
       ambiguous_input: unknownsCount >= 3,
       missing_context: outputs.some((o) => o.evidence.raw.sovereign_context === null),
-      conflicting_signals: false,
+      conflicting_signals: hasConflict,
       low_confidence_tokens: false,
       sparse_history: hasNullTrajectory
     });
+    if (hasStale)
+      sources.push({ name: "stale_record_evidence", weight: 0.2, value: 0.7 });
     if (hasUrgent) return { value: Math.min(mean, 0.2), sources };
     const penalty = sources.reduce((acc, s) => acc + s.weight * s.value, 0) * 0.3;
     return { value: Math.min(1, mean + penalty), sources };
@@ -1191,6 +1339,150 @@
     return parts.join("\n\n");
   }
 
+  // ui/src/sha256.ts
+  var K = new Uint32Array([
+    1116352408,
+    1899447441,
+    3049323471,
+    3921009573,
+    961987163,
+    1508970993,
+    2453635748,
+    2870763221,
+    3624381080,
+    310598401,
+    607225278,
+    1426881987,
+    1925078388,
+    2162078206,
+    2614888103,
+    3248222580,
+    3835390401,
+    4022224774,
+    264347078,
+    604807628,
+    770255983,
+    1249150122,
+    1555081692,
+    1996064986,
+    2554220882,
+    2821834349,
+    2952996808,
+    3210313671,
+    3336571891,
+    3584528711,
+    113926993,
+    338241895,
+    666307205,
+    773529912,
+    1294757372,
+    1396182291,
+    1695183700,
+    1986661051,
+    2177026350,
+    2456956037,
+    2730485921,
+    2820302411,
+    3259730800,
+    3345764771,
+    3516065817,
+    3600352804,
+    4094571909,
+    275423344,
+    430227734,
+    506948616,
+    659060556,
+    883997877,
+    958139571,
+    1322822218,
+    1537002063,
+    1747873779,
+    1955562222,
+    2024104815,
+    2227730452,
+    2361852424,
+    2428436474,
+    2756734187,
+    3204031479,
+    3329325298
+  ]);
+  function rotr(x, n) {
+    return x >>> n | x << 32 - n;
+  }
+  function utf8Encode(input) {
+    const out = [];
+    for (let i = 0; i < input.length; i++) {
+      let cp = input.charCodeAt(i);
+      if (cp >= 55296 && cp <= 56319 && i + 1 < input.length) {
+        const lo = input.charCodeAt(i + 1);
+        if (lo >= 56320 && lo <= 57343) {
+          cp = 65536 + (cp - 55296 << 10) + (lo - 56320);
+          i++;
+        }
+      }
+      if (cp < 128) out.push(cp);
+      else if (cp < 2048) out.push(192 | cp >> 6, 128 | cp & 63);
+      else if (cp < 65536)
+        out.push(224 | cp >> 12, 128 | cp >> 6 & 63, 128 | cp & 63);
+      else
+        out.push(
+          240 | cp >> 18,
+          128 | cp >> 12 & 63,
+          128 | cp >> 6 & 63,
+          128 | cp & 63
+        );
+    }
+    return new Uint8Array(out);
+  }
+  function sha256Hex(input) {
+    const bytes = utf8Encode(input);
+    const bitLen = bytes.length * 8;
+    const paddedLen = (bytes.length + 8 >> 6) + 1 << 6;
+    const buf = new Uint8Array(paddedLen);
+    buf.set(bytes);
+    buf[bytes.length] = 128;
+    const dv = new DataView(buf.buffer);
+    dv.setUint32(paddedLen - 4, bitLen >>> 0);
+    dv.setUint32(paddedLen - 8, Math.floor(bitLen / 2 ** 32));
+    let h0 = 1779033703, h1 = 3144134277, h2 = 1013904242, h3 = 2773480762;
+    let h4 = 1359893119, h5 = 2600822924, h6 = 528734635, h7 = 1541459225;
+    const w = new Uint32Array(64);
+    for (let block = 0; block < paddedLen; block += 64) {
+      for (let t = 0; t < 16; t++) w[t] = dv.getUint32(block + t * 4);
+      for (let t = 16; t < 64; t++) {
+        const s0 = rotr(w[t - 15], 7) ^ rotr(w[t - 15], 18) ^ w[t - 15] >>> 3;
+        const s1 = rotr(w[t - 2], 17) ^ rotr(w[t - 2], 19) ^ w[t - 2] >>> 10;
+        w[t] = w[t - 16] + s0 + w[t - 7] + s1 | 0;
+      }
+      let a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+      for (let t = 0; t < 64; t++) {
+        const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+        const ch = e & f ^ ~e & g;
+        const t1 = h + S1 + ch + K[t] + w[t] | 0;
+        const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+        const maj = a & b ^ a & c ^ b & c;
+        const t2 = S0 + maj | 0;
+        h = g;
+        g = f;
+        f = e;
+        e = d + t1 | 0;
+        d = c;
+        c = b;
+        b = a;
+        a = t1 + t2 | 0;
+      }
+      h0 = h0 + a | 0;
+      h1 = h1 + b | 0;
+      h2 = h2 + c | 0;
+      h3 = h3 + d | 0;
+      h4 = h4 + e | 0;
+      h5 = h5 + f | 0;
+      h6 = h6 + g | 0;
+      h7 = h7 + h | 0;
+    }
+    return [h0, h1, h2, h3, h4, h5, h6, h7].map((x) => (x >>> 0).toString(16).padStart(8, "0")).join("");
+  }
+
   // ui/src/model.ts
   var LENSES = [
     { id: "position", question: "Where am I?", capability: "Position" },
@@ -1204,6 +1496,56 @@
     sovereign_dictation: "sovereign dictation",
     fixture: "frozen-corpus fixture",
     import: "imported record file"
+  };
+  var GENESIS_ANCHOR = "guardianlink-record-genesis";
+  var LEGACY_ANCHOR = "guardianlink-record-legacy-anchor";
+  function canonicalProjection(e) {
+    return JSON.stringify({
+      seq: e.seq,
+      at: e.at,
+      kind: e.kind,
+      origin: e.origin,
+      question_type: e.question_type,
+      question_text: e.question_text,
+      source: e.source,
+      context_label: e.context_label,
+      answer_text: e.response.answer_text,
+      uncertainty_value: e.response.uncertainty
+    });
+  }
+  function entryHash(e, prev) {
+    return sha256Hex(prev + "\n" + canonicalProjection(e));
+  }
+  function nextAnchor(entries) {
+    if (entries.length === 0) return GENESIS_ANCHOR;
+    const last = entries[entries.length - 1];
+    return last.chain ? last.chain.hash : LEGACY_ANCHOR;
+  }
+  function verifyChain(entries) {
+    if (entries.length === 0) return "empty";
+    let expectedPrev = null;
+    let sawChained = false;
+    let sawLegacy = false;
+    for (const e of entries) {
+      if (!e.chain) {
+        sawLegacy = true;
+        expectedPrev = LEGACY_ANCHOR;
+        continue;
+      }
+      sawChained = true;
+      if (expectedPrev === null) expectedPrev = GENESIS_ANCHOR;
+      if (e.chain.prev !== expectedPrev) return "broken";
+      if (e.chain.hash !== entryHash(e, e.chain.prev)) return "broken";
+      expectedPrev = e.chain.hash;
+    }
+    if (!sawChained) return "legacy-unverified";
+    return sawLegacy ? "legacy-unverified" : "verified";
+  }
+  var CHAIN_STATUS_LABEL = {
+    verified: "hash chain verified",
+    "legacy-unverified": "legacy record \u2014 contains entries without chain data (unverified history)",
+    broken: "HASH CHAIN BROKEN \u2014 record contents do not match their chain",
+    empty: "empty record"
   };
   function analysisViewOf(output) {
     const sig = output.signals;
@@ -1337,13 +1679,14 @@
   </main>
   ${renderAskPanel()}
   ${renderFixturePanel()}
-  ${renderRecordPanel()}`;
+  ${renderRecordPanel(verifyChain(state.entries))}`;
   }
-  function renderRecordPanel() {
+  function renderRecordPanel(status) {
     return `<section class="record-panel">
     <h2>The record \u2014 persistence is explicit, never ambient</h2>
     <p class="record-policy">This record lives in memory only. It is not written to browser storage.
     Export downloads it as a JSON file; import loads a file you exported. Reloading without importing starts empty.</p>
+    <p class="chain-status">Tamper evidence: <span data-chain-status="${esc(status)}">${esc(CHAIN_STATUS_LABEL[status])}</span></p>
     <button data-action="export-record">Export record (JSON download)</button>
     <label class="import-label">Import a record export
       <input type="file" data-import-file accept="application/json,.json" />
@@ -1463,10 +1806,10 @@
     } else if (lens === "agency") {
       specific = view.candidate_actions.length ? renderActions(view.candidate_actions, "Candidate actions \u2014 gate state is part of the rendering") : `<p>No candidate actions emitted by the agency lens for this entry.</p>`;
     } else if (lens === "trajectory") {
-      specific = view.projection ? `<div class="projection" data-trajectory="projection"><h3>Projection \u2014 distinct from observation</h3>
+      specific = view.projection ? `<div class="projection" data-trajectory="projection" aria-label="Trajectory: a projection is stated, distinct from observation"><h3>Projection \u2014 distinct from observation</h3>
            <p>${esc(view.projection.statement)}</p>
            <p>Assumptions: ${esc(view.projection.assumptions.join("; "))}</p>
-           <p>Confidence: ${view.projection.confidence}</p></div>` : `<div class="projection" data-trajectory="null"><h3>No projection</h3>
+           <p>Confidence: ${view.projection.confidence}</p></div>` : `<div class="projection" data-trajectory="null" aria-label="Trajectory: no projection \u2014 the record does not support one"><h3>No projection</h3>
            <p>${esc(view.trajectory_null_reason ?? "The record does not support one.")}</p>
            <p>The observations describe where things ARE; they are not a forecast.</p></div>`;
     } else if (lens === "history") {
@@ -1516,7 +1859,7 @@
     ${relations.map((rel) => {
       const w = RELATIONSHIP_WEIGHT[rel.relationship_class] ?? 1;
       const label = RELATIONSHIP_CLASS_LABEL[rel.relationship_class] ?? rel.relationship_class;
-      return `<article class="rel-card" data-relationship-class="${esc(rel.relationship_class)}" data-rel-weight="${w}">
+      return `<article class="rel-card" data-relationship-class="${esc(rel.relationship_class)}" data-rel-weight="${w}" aria-label="Relationship class ${esc(rel.relationship_class)}, evidential weight ${w} of 4 \u2014 ${esc(label)}">
           <div class="rel-head">
             <span class="rel-class">${esc(rel.relationship_class)}</span>
             <span class="rel-weight">evidential weight ${w}/4 \u2014 ${esc(label)}</span>
@@ -1534,7 +1877,7 @@
     ${actions.map((a) => {
       const p = authorityPresentation(a);
       const check2 = a.authority_check;
-      return `<div class="action" data-gate="${p.gate}" data-executable="${p.executable}" data-authority-basis="${esc(check2?.basis ?? "none")}">
+      return `<div class="action" data-gate="${p.gate}" data-executable="${p.executable}" data-authority-basis="${esc(check2?.basis ?? "none")}" aria-label="Action gate state: ${esc(p.label)}">
           <p class="action-text">${esc(a.action)}</p>
           <p class="action-gate">${esc(p.label)}</p>
           ${check2 ? `<p class="action-note">Authority check \u2014 basis: ${esc(check2.basis)}; authorized: ${check2.authorized}; requires assent: ${check2.requires_assent}. ${esc(check2.note)}</p>` : ""}
@@ -1555,7 +1898,7 @@
     <h2>Uncertainty \u2014 cross-cut over all lenses: ${ev.value.toFixed(2)}</h2>
     ${order.map((s) => {
       const items = ev.states[s];
-      return `<div class="epistemic" data-uncertainty-state="${s}">
+      return `<div class="epistemic" data-uncertainty-state="${s}" aria-label="Uncertainty state: ${esc(UNCERTAINTY_STATE_LABEL[s])}">
           <h3>${esc(UNCERTAINTY_STATE_LABEL[s])}</h3>
           ${items.length ? `<ul>${items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : `<p class="epistemic-none">\u2014 none on this record \u2014</p>`}
         </div>`;
@@ -1744,7 +2087,7 @@
 
   // ui/src/app.ts
   var RECORD_EXPORT_FORMAT = "guardianlink-cognitive-surface/record";
-  var RECORD_EXPORT_VERSION = 1;
+  var RECORD_EXPORT_VERSION = 2;
   var SurfaceApp = class {
     constructor(root2) {
       this.root = root2;
@@ -1780,6 +2123,8 @@
         context_label: opts.contextLabel ?? null,
         response
       };
+      const anchor = nextAnchor(this.entries);
+      entry.chain = { prev: anchor, hash: entryHash(entry, anchor) };
       this.nextSeq += 1;
       this.entries.push(entry);
       this.selectedId = entry.id;
@@ -1834,7 +2179,7 @@
     // shape before applying anything (a bad file changes nothing).
     importRecord(json) {
       const parsed = JSON.parse(json);
-      if (parsed.format !== RECORD_EXPORT_FORMAT || parsed.version !== RECORD_EXPORT_VERSION || !Array.isArray(parsed.entries)) {
+      if (parsed.format !== RECORD_EXPORT_FORMAT || parsed.version !== 1 && parsed.version !== RECORD_EXPORT_VERSION || !Array.isArray(parsed.entries)) {
         throw new Error("not a cognitive-surface record export");
       }
       for (const e of parsed.entries) {
@@ -1843,6 +2188,20 @@
         }
       }
       const entries = parsed.entries;
+      if (parsed.version === RECORD_EXPORT_VERSION) {
+        for (const e of entries) {
+          if (!e.chain || typeof e.chain.prev !== "string" || typeof e.chain.hash !== "string") {
+            throw new Error(
+              "record import refused: v2 export contains an entry without a hash-chain link"
+            );
+          }
+        }
+        if (verifyChain(entries) === "broken") {
+          throw new Error(
+            "record import refused: hash chain verification failed (contents do not match their chain)"
+          );
+        }
+      }
       for (const e of entries) {
         if (e.origin === void 0) e.origin = "import";
         if (e.kind === void 0) e.kind = "question";
@@ -1858,6 +2217,10 @@
       }
       this.render();
       return entries.length;
+    }
+    /** Live chain-verification status of the in-memory record. */
+    chainStatus() {
+      return verifyChain(this.entries);
     }
     // Browser download of exportRecord(). Guarded so non-browser hosts
     // (tests, SSR) can call the click path without a Blob URL API.
