@@ -4,7 +4,17 @@
 // what "lenses, not tabs" means mechanically.
 
 import { answer } from "../../src/surface";
-import { EntryKind, EntryOrigin, LensId, RecordEntry, ViewId } from "./model";
+import {
+  ChainStatus,
+  EntryKind,
+  EntryOrigin,
+  LensId,
+  RecordEntry,
+  ViewId,
+  entryHash,
+  nextAnchor,
+  verifyChain,
+} from "./model";
 import { esc, layerKey, renderApp } from "./render";
 import {
   CORPUS_FIXTURES,
@@ -42,11 +52,14 @@ export interface EntrySubmission {
 // explicit, user-invoked export (a JSON file the user downloads) and an
 // explicit import of such a file.
 export const RECORD_EXPORT_FORMAT = "guardianlink-cognitive-surface/record";
-export const RECORD_EXPORT_VERSION = 1;
+// v2: entries may carry hash-chain links (see model.ts). v1 exports
+// remain importable as legacy-unchained records — displayed as such,
+// never silently upgraded (decided policy, ui/README.md).
+export const RECORD_EXPORT_VERSION = 2;
 
 export interface RecordExport {
   format: typeof RECORD_EXPORT_FORMAT;
-  version: typeof RECORD_EXPORT_VERSION;
+  version: number;
   entries: RecordEntry[];
 }
 
@@ -87,6 +100,11 @@ export class SurfaceApp {
       context_label: opts.contextLabel ?? null,
       response,
     };
+    // Chain the entry at admission: it links to whatever the record's
+    // tail anchors to (genesis, the last entry's hash, or the legacy
+    // anchor when the tail is unchained legacy history).
+    const anchor = nextAnchor(this.entries);
+    entry.chain = { prev: anchor, hash: entryHash(entry, anchor) };
     this.nextSeq += 1;
     this.entries.push(entry);
     this.selectedId = entry.id;
@@ -149,7 +167,7 @@ export class SurfaceApp {
     const parsed = JSON.parse(json) as Partial<RecordExport>;
     if (
       parsed.format !== RECORD_EXPORT_FORMAT ||
-      parsed.version !== RECORD_EXPORT_VERSION ||
+      (parsed.version !== 1 && parsed.version !== RECORD_EXPORT_VERSION) ||
       !Array.isArray(parsed.entries)
     ) {
       throw new Error("not a cognitive-surface record export");
@@ -166,6 +184,30 @@ export class SurfaceApp {
       }
     }
     const entries = parsed.entries as RecordEntry[];
+    // Tamper-evidence gate (v2): the chain is verified on the entries
+    // exactly as they appear in the file, BEFORE anything is applied
+    // or normalized. A v2 file claims a chain; a missing link or any
+    // mismatch refuses the import wholesale — the current record is
+    // untouched, never partially imported. v1 files carry no chain
+    // and import as legacy-unchained (see ui/README.md).
+    if (parsed.version === RECORD_EXPORT_VERSION) {
+      for (const e of entries) {
+        if (
+          !e.chain ||
+          typeof e.chain.prev !== "string" ||
+          typeof e.chain.hash !== "string"
+        ) {
+          throw new Error(
+            "record import refused: v2 export contains an entry without a hash-chain link"
+          );
+        }
+      }
+      if (verifyChain(entries) === "broken") {
+        throw new Error(
+          "record import refused: hash chain verification failed (contents do not match their chain)"
+        );
+      }
+    }
     // Entries from older exports may predate the ingestion stamps. An
     // entry without stamps was not witnessed at a capture boundary
     // here, so import stamps it for what it is: admitted via import,
@@ -186,6 +228,11 @@ export class SurfaceApp {
     }
     this.render();
     return entries.length;
+  }
+
+  /** Live chain-verification status of the in-memory record. */
+  chainStatus(): ChainStatus {
+    return verifyChain(this.entries);
   }
 
   // Browser download of exportRecord(). Guarded so non-browser hosts
