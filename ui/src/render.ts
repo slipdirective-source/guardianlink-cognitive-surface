@@ -79,7 +79,23 @@ export function renderApp(state: RenderState): string {
     ${state.selected ? renderMain(state, state.selected) : renderEmpty()}
   </main>
   ${renderAskPanel()}
-  ${renderFixturePanel()}`;
+  ${renderFixturePanel()}
+  ${renderRecordPanel()}`;
+}
+
+// Record persistence is explicit-only (decided policy, see ui/README.md):
+// the record lives in memory; export downloads it as a JSON file, import
+// loads such a file back. No ambient browser storage is used anywhere.
+function renderRecordPanel(): string {
+  return `<section class="record-panel">
+    <h2>The record — persistence is explicit, never ambient</h2>
+    <p class="record-policy">This record lives in memory only. It is not written to browser storage.
+    Export downloads it as a JSON file; import loads a file you exported. Reloading without importing starts empty.</p>
+    <button data-action="export-record">Export record (JSON download)</button>
+    <label class="import-label">Import a record export
+      <input type="file" data-import-file accept="application/json,.json" />
+    </label>
+  </section>`;
 }
 
 function renderEntrySelector(state: RenderState): string {
@@ -281,11 +297,16 @@ export function renderRelations(relations: AssertedRelation[]): string {
   return `<div class="relations">
     ${relations
       .map((rel) => {
-        const w = RELATIONSHIP_WEIGHT[rel.relationship_class];
-        return `<article class="rel-card" data-relationship-class="${rel.relationship_class}" data-rel-weight="${w}">
+        // Total over the class field: an out-of-enum value (impossible
+        // from the typed pipeline, but the DOM is an untrusted-string
+        // surface) renders at the weakest weight with the raw string as
+        // its own label — it never throws and never gains weight.
+        const w = RELATIONSHIP_WEIGHT[rel.relationship_class] ?? 1;
+        const label = RELATIONSHIP_CLASS_LABEL[rel.relationship_class] ?? rel.relationship_class;
+        return `<article class="rel-card" data-relationship-class="${esc(rel.relationship_class)}" data-rel-weight="${w}">
           <div class="rel-head">
             <span class="rel-class">${esc(rel.relationship_class)}</span>
-            <span class="rel-weight">evidential weight ${w}/4 — ${esc(RELATIONSHIP_CLASS_LABEL[rel.relationship_class])}</span>
+            <span class="rel-weight">evidential weight ${w}/4 — ${esc(label)}</span>
           </div>
           <p class="rel-claim">${esc(rel.subject)} ${esc(rel.predicate)} ${esc(rel.object)}</p>
           <p class="rel-just">Basis: ${esc(rel.justification)}</p>
@@ -303,7 +324,7 @@ export function renderActions(actions: CandidateAction[], title: string): string
       .map((a) => {
         const p = authorityPresentation(a);
         const check = a.authority_check;
-        return `<div class="action" data-gate="${p.gate}" data-executable="${p.executable}" data-authority-basis="${check?.basis ?? "none"}">
+        return `<div class="action" data-gate="${p.gate}" data-executable="${p.executable}" data-authority-basis="${esc(check?.basis ?? "none")}">
           <p class="action-text">${esc(a.action)}</p>
           <p class="action-gate">${esc(p.label)}</p>
           ${check ? `<p class="action-note">Authority check — basis: ${esc(check.basis)}; authorized: ${check.authorized}; requires assent: ${check.requires_assent}. ${esc(check.note)}</p>` : ""}
