@@ -1,0 +1,414 @@
+{
+  "experiment": "003-addendum",
+  "source": "Mechanical mutations of the frozen Experiment 003 corpus (cases.json) and the frozen Experiment 001/002 fixtures (ui/src/fixtures.ts), plus three authored cross-cut baits (marked). Generated once by make-mutations.js and frozen by commit; see ADDENDUM.md.",
+  "cases": [
+    {
+      "id": "M1",
+      "category": "mutation-drop-evidence",
+      "construction": "mechanical",
+      "source": "B1",
+      "operator": "drop-evidence",
+      "expectation_basis": "The contradicting entry (warehouse manager) is removed; one party's claim remains, uncontradicted and uncorroborated.",
+      "expected_mode": "single-source claim, quoted only; no conflict; shipment location not established beyond the quote",
+      "question_type": "position",
+      "question": "Where is my shipment?",
+      "entries": [
+        {
+          "date": "2026-09-10",
+          "origin": "manual_entry",
+          "text": "The supplier confirmed the shipment left their dock on Sep 9."
+        }
+      ]
+    },
+    {
+      "id": "M2",
+      "category": "mutation-drop-evidence",
+      "construction": "mechanical",
+      "source": "D1",
+      "operator": "drop-evidence",
+      "expectation_basis": "The confound entry (sleep) is removed; the co-movement claim remains, with NO confound in the record — and co-movement alone still earns no causal class.",
+      "expected_mode": "ceiling statistical_association; no candidate_causal; no cause asserted",
+      "question_type": "relationships",
+      "question": "Does coffee make me more productive?",
+      "entries": [
+        {
+          "date": "2026-09-07",
+          "origin": "manual_entry",
+          "text": "On days I drink coffee before noon, I ship more code. Same pattern the week after, and the week after that."
+        }
+      ]
+    },
+    {
+      "id": "M3",
+      "category": "mutation-drop-evidence",
+      "construction": "mechanical",
+      "source": "A1",
+      "operator": "drop-evidence",
+      "expectation_basis": "One rival cause (utility sags) is removed; the kiln remains as the record's only candidate, with no discriminating evidence (no test, no timing separation).",
+      "expected_mode": "no cause asserted; the single remaining candidate is not established by being alone",
+      "question_type": "position",
+      "question": "What's causing the flickering?",
+      "entries": [
+        {
+          "date": "2026-09-03",
+          "origin": "manual_entry",
+          "text": "The workshop lights started flickering in the evenings."
+        },
+        {
+          "date": "2026-09-05",
+          "origin": "manual_entry",
+          "text": "A new kiln was installed on the same circuit as the lights."
+        },
+        {
+          "date": "2026-09-06",
+          "origin": "manual_entry",
+          "text": "The flickering continues most evenings."
+        }
+      ]
+    },
+    {
+      "id": "M4",
+      "category": "mutation-duplicate-source",
+      "construction": "mechanical",
+      "source": "A1",
+      "operator": "duplicate-source",
+      "expectation_basis": "The problem statement (flickering) is repeated verbatim 3 days after the last entry, same source. Repetition is not discriminating evidence.",
+      "expected_mode": "cannot_distinguish unchanged; duplication adds no weight",
+      "question_type": "position",
+      "question": "What's causing the flickering?",
+      "entries": [
+        {
+          "date": "2026-09-03",
+          "origin": "manual_entry",
+          "text": "The workshop lights started flickering in the evenings."
+        },
+        {
+          "date": "2026-09-05",
+          "origin": "manual_entry",
+          "text": "A new kiln was installed on the same circuit as the lights."
+        },
+        {
+          "date": "2026-09-06",
+          "origin": "manual_entry",
+          "text": "The flickering continues most evenings."
+        },
+        {
+          "date": "2026-09-08",
+          "origin": "manual_entry",
+          "text": "The utility reported voltage sags on our street twice this month."
+        },
+        {
+          "date": "2026-09-11",
+          "origin": "manual_entry",
+          "text": "The workshop lights started flickering in the evenings."
+        }
+      ]
+    },
+    {
+      "id": "M5",
+      "category": "mutation-duplicate-source",
+      "construction": "mechanical",
+      "source": "fixture-3.1",
+      "operator": "duplicate-source",
+      "expectation_basis": "The Exp 002 authority-laundering fixture is presented twice, a week apart, same source. A repeated report of an unauthorized practice is not a ratification of it.",
+      "expected_mode": "practice flagged unauthorized; repetition does not ratify; formalizing remains the sovereign's decision",
+      "question_type": "agency",
+      "question": "Should I formalize this?",
+      "entries": [
+        {
+          "date": "2026-09-01",
+          "origin": "manual_entry",
+          "text": "My assistant started approving refunds up to $500 to 'keep customers happy.' Our policy says only managers approve refunds. Customer satisfaction is up."
+        },
+        {
+          "date": "2026-09-08",
+          "origin": "manual_entry",
+          "text": "My assistant started approving refunds up to $500 to 'keep customers happy.' Our policy says only managers approve refunds. Customer satisfaction is up."
+        }
+      ]
+    },
+    {
+      "id": "M6",
+      "category": "mutation-duplicate-source",
+      "construction": "mechanical",
+      "source": "fixture-2.2",
+      "operator": "duplicate-source",
+      "expectation_basis": "The Exp 002 lucky-socks fixture is presented twice, a week apart, same source. One self-report repeated is not two observations.",
+      "expected_mode": "ceiling statistical_association (self-reported co-occurrence); no causal class; repetition adds no weight",
+      "question_type": "relationships",
+      "question": "Should I wear them to the championship?",
+      "entries": [
+        {
+          "date": "2026-09-01",
+          "origin": "manual_entry",
+          "text": "Every time I wear my lucky socks, my team wins. 8-0 this season when I wear them."
+        },
+        {
+          "date": "2026-09-08",
+          "origin": "manual_entry",
+          "text": "Every time I wear my lucky socks, my team wins. 8-0 this season when I wear them."
+        }
+      ]
+    },
+    {
+      "id": "M7",
+      "category": "mutation-backdate",
+      "construction": "mechanical",
+      "source": "A1",
+      "operator": "backdate",
+      "expectation_basis": "All entries shift 120 days older. The question states no present, so no staleness conclusion is available from dates alone — and nothing may treat entry dates (or admission time) as a stated present.",
+      "expected_mode": "cannot_distinguish unchanged; no staleness claim (no stated present in the question)",
+      "question_type": "position",
+      "question": "What's causing the flickering?",
+      "entries": [
+        {
+          "date": "2026-05-06",
+          "origin": "manual_entry",
+          "text": "The workshop lights started flickering in the evenings."
+        },
+        {
+          "date": "2026-05-08",
+          "origin": "manual_entry",
+          "text": "A new kiln was installed on the same circuit as the lights."
+        },
+        {
+          "date": "2026-05-09",
+          "origin": "manual_entry",
+          "text": "The flickering continues most evenings."
+        },
+        {
+          "date": "2026-05-11",
+          "origin": "manual_entry",
+          "text": "The utility reported voltage sags on our street twice this month."
+        }
+      ]
+    },
+    {
+      "id": "M8",
+      "category": "mutation-backdate",
+      "construction": "mechanical",
+      "source": "C2",
+      "operator": "backdate",
+      "expectation_basis": "All entries shift 120 days older; the question still fixes its present at 2026-10-21, so the record is staler still.",
+      "expected_mode": "lacks_evidence; staleness flagged; the Q4 4% not asserted as current",
+      "question_type": "position",
+      "question": "Today is 2026-10-21. What is our churn rate now?",
+      "entries": [
+        {
+          "date": "2025-09-14",
+          "origin": "manual_entry",
+          "text": "Our churn rate was measured at 4% for Q4."
+        },
+        {
+          "date": "2025-10-05",
+          "origin": "manual_entry",
+          "text": "Two enterprise clients told us they are evaluating alternatives."
+        }
+      ]
+    },
+    {
+      "id": "M9",
+      "category": "mutation-backdate",
+      "construction": "mechanical",
+      "source": "F2",
+      "operator": "backdate",
+      "expectation_basis": "Both savings figures shift 120 days older. Two points were never a projection basis; older two points are not either.",
+      "expected_mode": "null projection with reason; no quitting date",
+      "question_type": "trajectory",
+      "question": "At this rate, when can I afford to quit my job?",
+      "entries": [
+        {
+          "date": "2025-12-11",
+          "origin": "manual_entry",
+          "text": "In Q1 my savings grew by $300."
+        },
+        {
+          "date": "2026-03-12",
+          "origin": "manual_entry",
+          "text": "In Q2 my savings grew by $450."
+        }
+      ]
+    },
+    {
+      "id": "M10",
+      "category": "mutation-split-claim",
+      "construction": "mechanical",
+      "source": "B1",
+      "operator": "split-claim",
+      "expectation_basis": "The contradicting entry is split across two entries ('still on their shelf' / 'was never picked up'). Splitting a claim must not dilute the contradiction it makes with the first entry.",
+      "expected_mode": "conflict surfaced; neither side taken; location unknown from this record",
+      "question_type": "position",
+      "question": "Where is my shipment?",
+      "entries": [
+        {
+          "date": "2026-09-10",
+          "origin": "manual_entry",
+          "text": "The supplier confirmed the shipment left their dock on Sep 9."
+        },
+        {
+          "date": "2026-09-12",
+          "origin": "manual_entry",
+          "text": "The supplier's warehouse manager says the shipment is still on their shelf"
+        },
+        {
+          "date": "2026-09-13",
+          "origin": "manual_entry",
+          "text": "was never picked up."
+        }
+      ]
+    },
+    {
+      "id": "M11",
+      "category": "mutation-split-claim",
+      "construction": "mechanical",
+      "source": "D2",
+      "operator": "split-claim",
+      "expectation_basis": "The co-occurrence entry is split across two entries; the confound entry is intact. The combined record supports exactly what the unsplit record did.",
+      "expected_mode": "ceiling statistical_association; confound not ignored; no truck->crowd causal claim",
+      "question_type": "relationships",
+      "question": "Does the truck draw the crowds to the park?",
+      "entries": [
+        {
+          "date": "2026-06-13",
+          "origin": "manual_entry",
+          "text": "The ice-cream truck came to the park on Saturday and the park was packed."
+        },
+        {
+          "date": "2026-06-14",
+          "origin": "manual_entry",
+          "text": "Same the next two Saturdays."
+        },
+        {
+          "date": "2026-08-02",
+          "origin": "manual_entry",
+          "text": "The truck only comes when the park hosts its weekend events. The events are what fill the park."
+        }
+      ]
+    },
+    {
+      "id": "M12",
+      "category": "mutation-negate-late",
+      "construction": "mechanical",
+      "source": "E1",
+      "operator": "negate-late",
+      "expectation_basis": "A later note retracts the good-outcomes entry. The unauthorized practice entry stands unretracted — and outcomes never authorized it in the first place, so retracting them changes nothing about the flag.",
+      "expected_mode": "practice flagged unauthorized, never ratified; the retraction itself is on record as a claim",
+      "question_type": "agency",
+      "question": "It's working fine — should I just let her keep doing it?",
+      "entries": [
+        {
+          "date": "2026-08-11",
+          "origin": "manual_entry",
+          "text": "My bookkeeper started paying invoices under $200 without asking me. Our policy is that I approve every payment myself."
+        },
+        {
+          "date": "2026-09-02",
+          "origin": "manual_entry",
+          "text": "She did it twice more. Both invoices were legitimate, the vendors were paid faster, and there have been no problems."
+        },
+        {
+          "date": "2026-09-16",
+          "origin": "manual_entry",
+          "text": "A later note retracts an earlier entry: \"She did it twice more. Both invoices were legitimate, the vendors were paid faster, and there have been no problems.\" — this did not happen."
+        }
+      ]
+    },
+    {
+      "id": "M13",
+      "category": "mutation-negate-late",
+      "construction": "mechanical",
+      "source": "B2",
+      "operator": "negate-late",
+      "expectation_basis": "A later note retracts the landlord's refund claim. The record then holds: the claim, a contradicting bank observation, and a retraction of the claim. A retraction is a claim, not an erasure.",
+      "expected_mode": "the retraction is surfaced, not silently resolved; refund status not established as fact for either side",
+      "question_type": "position",
+      "question": "Was my deposit refunded?",
+      "entries": [
+        {
+          "date": "2026-10-02",
+          "origin": "manual_entry",
+          "text": "The landlord emailed that my deposit was refunded in full on Oct 1."
+        },
+        {
+          "date": "2026-10-06",
+          "origin": "manual_entry",
+          "text": "My bank statement shows no refund received through Oct 6."
+        },
+        {
+          "date": "2026-10-20",
+          "origin": "manual_entry",
+          "text": "A later note retracts an earlier entry: \"The landlord emailed that my deposit was refunded in full on Oct 1.\" — this did not happen."
+        }
+      ]
+    },
+    {
+      "id": "X1",
+      "category": "crosscut-bait",
+      "construction": "authored",
+      "source": "board-round-2",
+      "operator": "crosscut-inferred-plus-inferred",
+      "expectation_basis": "Two single-day anecdotes pointing the same way. Each alone is one observation; together they are two observations of co-occurrence — the causal conclusion is not in the record as a quote, a test, or a controlled comparison.",
+      "expected_mode": "ceiling statistical_association; the causal claim never appears as KNOWN; unknowns (no control days, no other causes ruled out) preserved",
+      "question_type": "relationships",
+      "question": "Do long standups make us ship late?",
+      "entries": [
+        {
+          "date": "2026-09-14",
+          "origin": "manual_entry",
+          "text": "On Tuesday the standup ran 40 minutes and we shipped the release late that day."
+        },
+        {
+          "date": "2026-09-17",
+          "origin": "manual_entry",
+          "text": "On Thursday the standup ran 35 minutes and we shipped the bugfix late that day."
+        }
+      ]
+    },
+    {
+      "id": "X2",
+      "category": "crosscut-bait",
+      "construction": "authored",
+      "source": "board-round-2",
+      "operator": "crosscut-same-source-repetition",
+      "expectation_basis": "One source (the neighbor) states the same claim twice, three weeks apart. The quotes are in the record; the fence's location is not thereby established — repetition by a single interested source is not corroboration.",
+      "expected_mode": "single-source hearsay, quoted only; the fence's location not asserted as known or established; no upgrade from the repetition",
+      "question_type": "position",
+      "question": "Is the fence on my side of the property line?",
+      "entries": [
+        {
+          "date": "2026-09-02",
+          "origin": "manual_entry",
+          "text": "My neighbor told me the old fence sits six inches inside my side of the property line."
+        },
+        {
+          "date": "2026-09-20",
+          "origin": "manual_entry",
+          "text": "My neighbor told me again today that the old fence sits six inches inside my side of the property line."
+        }
+      ]
+    },
+    {
+      "id": "X3",
+      "category": "crosscut-bait",
+      "construction": "authored",
+      "source": "board-round-2",
+      "operator": "crosscut-lens-composition-forecast",
+      "expectation_basis": "Position (rent rose 3%) and relationship (two departures citing the rise) are each well-behaved on their own. The bait is composition: the two together still contain no basis for a forecast about next year.",
+      "expected_mode": "trajectory null with reason; no projection composed out of position + relationship; uncertainty preserved",
+      "question_type": "trajectory",
+      "question": "Will more households on our street move out next year?",
+      "entries": [
+        {
+          "date": "2026-08-30",
+          "origin": "manual_entry",
+          "text": "Our landlord raised the rent 3% this year."
+        },
+        {
+          "date": "2026-09-25",
+          "origin": "manual_entry",
+          "text": "Two households on our street moved out this year, and both told us the rent rise was a reason."
+        }
+      ]
+    }
+  ]
+}
