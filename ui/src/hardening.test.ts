@@ -358,7 +358,7 @@ describe("item 4: the record persists only by explicit export/import — never a
     expect(second.root.textContent).toContain("No entries in the record yet");
   });
 
-  test("export -> import round-trips the record byte-identically", () => {
+  test("export -> import round-trips the record (byte-identical at the downgraded fixed point)", () => {
     const a = setup();
     a.app.loadFixture("1.1");
     a.app.loadFixture("3.1");
@@ -368,16 +368,37 @@ describe("item 4: the record persists only by explicit export/import — never a
     const b = setup();
     const count = b.app.importRecord(exported);
     expect(count).toBe(3);
-    // The exported entries are the record's data: parsed back, they are
-    // entry-for-entry identical, in the same order. (The live response
-    // also embeds cluster objects with functions in ranked_clusters —
-    // rendering consumes only their data fields, and the export is the
-    // data projection of the record.)
-    expect(JSON.parse(b.app.exportRecord()).entries).toEqual(JSON.parse(exported).entries);
+    // NAMED CHANGE (board round 2, Fix A — import provenance
+    // downgrade): this test previously asserted the imported entries
+    // are entry-for-entry identical to the export and the re-export
+    // byte-identical to the original. Import now downgrades
+    // provenance by design: every imported entry's effective origin
+    // becomes "import" and the file's stamps are preserved as
+    // claimed provenance. Everything else — the record's data, its
+    // order, its chain — is unchanged, and the downgraded record is
+    // a fixed point: re-exporting and re-importing it changes
+    // nothing further, byte for byte. (The live response also embeds
+    // cluster objects with functions in ranked_clusters — rendering
+    // consumes only their data fields, and the export is the data
+    // projection of the record.)
+    const stripProvenance = (entries: Record<string, unknown>[]) =>
+      entries.map((e) => {
+        const { origin, claimed_origin, claimed_at, claimed_kind, ...rest } = e;
+        return rest;
+      });
+    expect(stripProvenance(JSON.parse(b.app.exportRecord()).entries)).toEqual(
+      stripProvenance(JSON.parse(exported).entries)
+    );
+    for (const e of b.app.entries) {
+      expect(e.origin).toBe("import");
+      expect(e.claimed_origin).toBe("fixture");
+    }
     expect(b.app.entries.map((e) => [e.seq, e.question_text])).toEqual(
       a.app.entries.map((e) => [e.seq, e.question_text])
     );
-    expect(b.app.exportRecord()).toBe(exported); // byte-identical
+    const c = setup();
+    c.app.importRecord(b.app.exportRecord());
+    expect(c.app.exportRecord()).toBe(b.app.exportRecord()); // fixed point, byte-identical
     // and the imported record renders the same selected entry
     expect(b.root.querySelector("[data-entry-id]")!.getAttribute("data-entry-id")).toBe(
       a.root.querySelector("[data-entry-id]")!.getAttribute("data-entry-id")
