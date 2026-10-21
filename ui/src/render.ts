@@ -17,6 +17,7 @@ import { ClusterOutput, SurfaceResponse } from "../../src/types";
 import { AssertedRelation, CandidateAction } from "../../src/reasoner";
 import {
   AnalysisView,
+  ENTRY_ORIGIN_LABEL,
   LENSES,
   LensId,
   RecordEntry,
@@ -135,7 +136,7 @@ function renderHome(state: RenderState, entry: RecordEntry): string {
     ${urgent ? renderUrgent(urgent) : ""}
     <section class="now" data-section="position-now">
       <h1>You, now</h1>
-      <p class="entry-meta">#${entry.seq} · ${esc(entry.at)} · ${entry.source === "fixture" ? "frozen-corpus fixture" : "live input"}${entry.context_label ? ` · ${esc(entry.context_label)}` : ""}</p>
+      <p class="entry-meta">#${entry.seq} · ${esc(entry.at)} · ${esc(ENTRY_ORIGIN_LABEL[entry.origin] ?? entry.origin)} · ${esc(entry.kind)} · stamped at capture${entry.context_label ? ` · ${esc(entry.context_label)}` : ""}</p>
       <p class="question-text">${esc(entry.question_text)}</p>
       <p class="position-statement">${esc(r.output.summary)}</p>
     </section>
@@ -273,7 +274,7 @@ function renderRecordTimeline(state: RenderState): string {
           <span class="rec-seq">#${e.seq}</span>
           <span class="rec-when">${esc(e.at)}</span>
           <span class="rec-q">${esc(e.question_text)}</span>
-          <span class="rec-meta">primary lens ${esc(e.response.cluster_id)} · uncertainty ${e.response.uncertainty.toFixed(2)}${urgent ? " · URGENT ACTION ON RECORD" : ""}</span>
+          <span class="rec-meta">primary lens ${esc(e.response.cluster_id)} · ${esc(e.kind)} · ${esc(ENTRY_ORIGIN_LABEL[e.origin] ?? e.origin)} · uncertainty ${e.response.uncertainty.toFixed(2)}${urgent ? " · URGENT ACTION ON RECORD" : ""}</span>
         </button>
       </li>`;
     })
@@ -428,9 +429,24 @@ export function renderLayers(
 
 function renderAskPanel(): string {
   return `<section class="ask-panel">
-    <h2>Put a question to the record</h2>
+    <h2>Add to the record — the capture boundary</h2>
+    <p class="capture-policy">Source and time are stamped by this form when the entry is admitted —
+    they are never taken from the entry's own text. An entry is a claim from its stamped source,
+    admitted to the raw layer only; what it supports beyond that is the pipeline's work, not ingestion's.</p>
     <form id="ask-form">
-      <label>Lens (question type)
+      <label>Entry kind
+        <select name="entry_kind">
+          <option value="question">Question — put to a lens</option>
+          <option value="observation">Observation — a statement, recorded as position evidence</option>
+        </select>
+      </label>
+      <label>Source (stamped at capture)
+        <select name="entry_origin">
+          <option value="manual_entry">Manual entry — typed by the sovereign</option>
+          <option value="sovereign_dictation">Sovereign dictation — spoken by the sovereign</option>
+        </select>
+      </label>
+      <label>Lens (for questions)
         <select name="qtype">
           <option value="position">Where am I?</option>
           <option value="history">How did I get here?</option>
@@ -439,11 +455,11 @@ function renderAskPanel(): string {
           <option value="agency">What can I do about it?</option>
         </select>
       </label>
-      <label>Question
-        <input name="qtext" type="text" autocomplete="off" placeholder="State the situation or question, in your own words" />
+      <label>Entry text
+        <input name="qtext" type="text" autocomplete="off" placeholder="The observation or question, in your own words" />
       </label>
       <label class="demo-toggle"><input name="demo_context" type="checkbox" /> attach the demo sovereign record (fixture) as context</label>
-      <button type="submit">Answer — through the pipeline</button>
+      <button type="submit">Record entry — through the pipeline</button>
     </form>
   </section>`;
 }
