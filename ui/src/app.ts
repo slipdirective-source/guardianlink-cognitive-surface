@@ -30,6 +30,9 @@ export interface AskOptions {
   // pass the boundary facts; the entry text plays no part in them.
   kind?: EntryKind;
   origin?: EntryOrigin;
+  // The user's stated event time (asserted_at) — a claim, set from a
+  // distinct boundary field; never confused with the admission stamp.
+  assertedAt?: string;
 }
 
 export interface EntrySubmission {
@@ -40,6 +43,8 @@ export interface EntrySubmission {
   questionType?: string;
   // The capture source, chosen at the boundary (form control or caller).
   origin: EntryOrigin;
+  // The user's stated event time, if they give one (a claim).
+  assertedAt?: string;
   sovereignContext?: Record<string, unknown> | null;
   contextLabel?: string | null;
 }
@@ -91,6 +96,9 @@ export class SurfaceApp {
     const entry: RecordEntry = {
       id: this.nextSeq,
       seq: this.nextSeq,
+      // observed_at: this system's clock at admission. The stated
+      // event time, when the user gives one, is asserted_at — a
+      // separate field, never this one.
       at: new Date().toISOString(),
       question_type: type,
       question_text: text,
@@ -98,6 +106,7 @@ export class SurfaceApp {
       kind: opts.kind ?? "question",
       origin: opts.origin ?? (opts.source === "fixture" ? "fixture" : "manual_entry"),
       context_label: opts.contextLabel ?? null,
+      ...(opts.assertedAt ? { asserted_at: opts.assertedAt } : {}),
       response,
     };
     // Chain the entry at admission: it links to whatever the record's
@@ -129,6 +138,7 @@ export class SurfaceApp {
     return this.ask(text, type, {
       kind: sub.kind,
       origin: sub.origin,
+      assertedAt: sub.assertedAt,
       sovereignContext: sub.sovereignContext ?? null,
       contextLabel: sub.contextLabel ?? null,
     });
@@ -208,13 +218,39 @@ export class SurfaceApp {
         );
       }
     }
-    // Entries from older exports may predate the ingestion stamps. An
-    // entry without stamps was not witnessed at a capture boundary
-    // here, so import stamps it for what it is: admitted via import,
-    // as a question. Entries that carry their stamps keep them — the
-    // stamp is part of the entry, not of the file it traveled in.
+    // Import provenance downgrade (board round 2, 2026-10-21). The
+    // chain gate above establishes CONSISTENCY ONLY: the file's
+    // entries match the file's chain. It cannot establish that any
+    // stamp in the file was ever witnessed — a forged export can
+    // carry a self-consistent chain and sovereign_dictation stamps,
+    // and it would pass that gate. So the import is treated as what
+    // it is: the capture event THIS system witnessed. Every entry's
+    // effective origin becomes "import", and the stamps the file
+    // carried are preserved on the entry as claimed provenance
+    // (claimed_origin / claimed_at / claimed_kind) — visible as
+    // claims, never as witnessed stamps. Entries that carried no
+    // stamps (v1 legacy) simply have no claims to preserve; an entry
+    // without a kind defaults to "question", as before. Claimed
+    // fields are set only when absent — the first downgrade's claim
+    // wins, so re-importing an already-downgraded file preserves the
+    // original claim instead of overwriting it with "import".
+    //
+    // The chain stays valid across the downgrade: canonicalProjection
+    // reads the claimed stamps when present (the chain binds the
+    // entry as it was chained), and entries appended after the
+    // import are local captures — chained over their own witnessed
+    // stamps, linking from the imported record's tail hash as before.
     for (const e of entries) {
-      if (e.origin === undefined) e.origin = "import";
+      if (e.claimed_origin === undefined && e.origin !== undefined) {
+        e.claimed_origin = e.origin;
+      }
+      if (e.claimed_at === undefined && typeof e.at === "string") {
+        e.claimed_at = e.at;
+      }
+      if (e.claimed_kind === undefined && e.kind !== undefined) {
+        e.claimed_kind = e.kind;
+      }
+      e.origin = "import";
       if (e.kind === undefined) e.kind = "question";
     }
     this.entries = entries;
@@ -330,11 +366,15 @@ export class SurfaceApp {
       const origin: EntryOrigin =
         originRaw === "sovereign_dictation" ? "sovereign_dictation" : "manual_entry";
       const demo = data.get("demo_context") === "on";
+      // The stated event time is its own boundary field (a claim);
+      // it is never parsed out of the text and never touches `at`.
+      const assertedAt = String(data.get("asserted_at") ?? "").trim();
       this.submitEntry({
         kind,
         text,
         questionType: String(data.get("qtype") ?? "position"),
         origin,
+        assertedAt: assertedAt ? assertedAt : undefined,
         sovereignContext: demo ? DEMO_SOVEREIGN_CONTEXT : null,
         contextLabel: demo ? DEMO_CONTEXT_LABEL : null,
       });
