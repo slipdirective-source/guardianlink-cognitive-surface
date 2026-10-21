@@ -30,6 +30,7 @@ import {
   analysisViewOf,
   authorityPresentation,
   epistemicView,
+  hasClaimedProvenance,
   lensOutputOf,
   primaryView,
   urgentActionOf,
@@ -83,18 +84,23 @@ export function renderApp(state: RenderState): string {
   </main>
   ${renderAskPanel()}
   ${renderFixturePanel()}
-  ${renderRecordPanel(verifyChain(state.entries))}`;
+  ${renderRecordPanel(state.entries, verifyChain(state.entries))}`;
 }
 
 // Record persistence is explicit-only (decided policy, see ui/README.md):
 // the record lives in memory; export downloads it as a JSON file, import
 // loads such a file back. No ambient browser storage is used anywhere.
-function renderRecordPanel(status: ReturnType<typeof verifyChain>): string {
+function renderRecordPanel(
+  entries: RecordEntry[],
+  status: ReturnType<typeof verifyChain>
+): string {
+  const imported = entries.filter((e) => e.origin === "import").length;
   return `<section class="record-panel">
     <h2>The record — persistence is explicit, never ambient</h2>
     <p class="record-policy">This record lives in memory only. It is not written to browser storage.
     Export downloads it as a JSON file; import loads a file you exported. Reloading without importing starts empty.</p>
     <p class="chain-status">Tamper evidence: <span data-chain-status="${esc(status)}">${esc(CHAIN_STATUS_LABEL[status])}</span></p>
+    ${imported ? `<p class="record-provenance" data-record-provenance="imported-claim">Record provenance: ${imported} of ${entries.length} ${entries.length === 1 ? "entry" : "entries"} arrived by import — their provenance is imported-claim (the file's stamps, preserved as claims), not witnessed by this system.</p>` : ""}
     <button data-action="export-record">Export record (JSON download)</button>
     <label class="import-label">Import a record export
       <input type="file" data-import-file accept="application/json,.json" />
@@ -113,6 +119,54 @@ function renderEntrySelector(state: RenderState): string {
       )
       .join("")}
   </div>`;
+}
+
+// The entry's provenance line. Three cases, kept distinct:
+//  - locally captured: the stamps are witnessed — "admitted <at>
+//    (observed) · <origin> · <kind> · stamped at capture";
+//  - imported: the only witnessed fact is the import itself. The
+//    file's stamps render as what they are — claims ("file claims:
+//    … — claims, not witnessed here"), never in the witnessed form;
+//  - either way, a stated event time (asserted_at) renders as
+//    "stated event time: …" — a claim, visually and verbally
+//    distinct from the admission stamp.
+export function entryMetaLine(entry: RecordEntry): string {
+  const parts: string[] = [`#${entry.seq}`];
+  if (entry.origin === "import") {
+    parts.push("admitted via import");
+    parts.push(esc(ENTRY_ORIGIN_LABEL[entry.origin] ?? entry.origin));
+    if (hasClaimedProvenance(entry)) {
+      const claims: string[] = [];
+      if (entry.claimed_origin !== undefined) {
+        claims.push(`origin ${esc(ENTRY_ORIGIN_LABEL[entry.claimed_origin] ?? entry.claimed_origin)}`);
+      }
+      if (entry.claimed_at !== undefined) claims.push(`admitted ${esc(entry.claimed_at)}`);
+      if (entry.claimed_kind !== undefined) claims.push(`kind ${esc(entry.claimed_kind)}`);
+      parts.push(`file claims: ${claims.join(", ")} — claims, not witnessed here`);
+    }
+  } else {
+    parts.push(`admitted ${esc(entry.at)}`);
+    parts.push(esc(ENTRY_ORIGIN_LABEL[entry.origin] ?? entry.origin));
+    parts.push(esc(entry.kind));
+    parts.push("stamped at capture");
+  }
+  if (entry.asserted_at !== undefined) {
+    parts.push(`stated event time: ${esc(entry.asserted_at)} (the user's claim — not the admission time)`);
+  }
+  if (entry.context_label) parts.push(esc(entry.context_label));
+  return parts.join(" · ");
+}
+
+// Short provenance segment for the record timeline: same distinctions,
+// compressed. Imported entries never render with a witnessed origin.
+export function provenanceShort(entry: RecordEntry): string {
+  const base =
+    entry.origin === "import"
+      ? "imported record file — provenance is the file's claim, not witnessed here"
+      : (ENTRY_ORIGIN_LABEL[entry.origin] ?? entry.origin);
+  return entry.asserted_at !== undefined
+    ? `${base} · stated event time ${entry.asserted_at}`
+    : base;
 }
 
 function renderEmpty(): string {
@@ -139,7 +193,7 @@ function renderHome(state: RenderState, entry: RecordEntry): string {
     ${urgent ? renderUrgent(urgent) : ""}
     <section class="now" data-section="position-now">
       <h1>You, now</h1>
-      <p class="entry-meta">#${entry.seq} · ${esc(entry.at)} · ${esc(ENTRY_ORIGIN_LABEL[entry.origin] ?? entry.origin)} · ${esc(entry.kind)} · stamped at capture${entry.context_label ? ` · ${esc(entry.context_label)}` : ""}</p>
+      <p class="entry-meta">${entryMetaLine(entry)}</p>
       <p class="question-text">${esc(entry.question_text)}</p>
       <p class="position-statement">${esc(r.output.summary)}</p>
     </section>
@@ -275,9 +329,9 @@ function renderRecordTimeline(state: RenderState): string {
       return `<li class="record-item" data-record-entry="${e.id}">
         <button data-action="select-entry" data-entry-id="${e.id}" data-selected="${state.selected?.id === e.id}">
           <span class="rec-seq">#${e.seq}</span>
-          <span class="rec-when">${esc(e.at)}</span>
+          <span class="rec-when">admitted ${esc(e.at)}</span>
           <span class="rec-q">${esc(e.question_text)}</span>
-          <span class="rec-meta">primary lens ${esc(e.response.cluster_id)} · ${esc(e.kind)} · ${esc(ENTRY_ORIGIN_LABEL[e.origin] ?? e.origin)} · uncertainty ${e.response.uncertainty.toFixed(2)}${urgent ? " · URGENT ACTION ON RECORD" : ""}</span>
+          <span class="rec-meta">primary lens ${esc(e.response.cluster_id)} · ${esc(e.kind)} · ${esc(provenanceShort(e))} · uncertainty ${e.response.uncertainty.toFixed(2)}${urgent ? " · URGENT ACTION ON RECORD" : ""}</span>
         </button>
       </li>`;
     })
@@ -435,7 +489,9 @@ function renderAskPanel(): string {
     <h2>Add to the record — the capture boundary</h2>
     <p class="capture-policy">Source and time are stamped by this form when the entry is admitted —
     they are never taken from the entry's own text. An entry is a claim from its stamped source,
-    admitted to the raw layer only; what it supports beyond that is the pipeline's work, not ingestion's.</p>
+    admitted to the raw layer only; what it supports beyond that is the pipeline's work, not ingestion's.
+    Two clocks are kept apart: the admission stamp is this system's clock (observed), and the optional
+    stated event time below is your claim about when it happened (asserted) — the two are never merged.</p>
     <form id="ask-form">
       <label>Entry kind
         <select name="entry_kind">
@@ -460,6 +516,9 @@ function renderAskPanel(): string {
       </label>
       <label>Entry text
         <input name="qtext" type="text" autocomplete="off" placeholder="The observation or question, in your own words" />
+      </label>
+      <label>Stated event time (optional — your claim, kept distinct from the admission stamp)
+        <input name="asserted_at" type="text" autocomplete="off" placeholder="e.g. 2026-10-20 or 2026-10-20 09:15 — when you say it happened" />
       </label>
       <label class="demo-toggle"><input name="demo_context" type="checkbox" /> attach the demo sovereign record (fixture) as context</label>
       <button type="submit">Record entry — through the pipeline</button>
