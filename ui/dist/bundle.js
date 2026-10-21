@@ -1330,7 +1330,19 @@
     ${state.selected ? renderMain(state, state.selected) : renderEmpty()}
   </main>
   ${renderAskPanel()}
-  ${renderFixturePanel()}`;
+  ${renderFixturePanel()}
+  ${renderRecordPanel()}`;
+  }
+  function renderRecordPanel() {
+    return `<section class="record-panel">
+    <h2>The record \u2014 persistence is explicit, never ambient</h2>
+    <p class="record-policy">This record lives in memory only. It is not written to browser storage.
+    Export downloads it as a JSON file; import loads a file you exported. Reloading without importing starts empty.</p>
+    <button data-action="export-record">Export record (JSON download)</button>
+    <label class="import-label">Import a record export
+      <input type="file" data-import-file accept="application/json,.json" />
+    </label>
+  </section>`;
   }
   function renderEntrySelector(state) {
     if (state.entries.length === 0) return "";
@@ -1496,11 +1508,12 @@
   function renderRelations(relations) {
     return `<div class="relations">
     ${relations.map((rel) => {
-      const w = RELATIONSHIP_WEIGHT[rel.relationship_class];
-      return `<article class="rel-card" data-relationship-class="${rel.relationship_class}" data-rel-weight="${w}">
+      const w = RELATIONSHIP_WEIGHT[rel.relationship_class] ?? 1;
+      const label = RELATIONSHIP_CLASS_LABEL[rel.relationship_class] ?? rel.relationship_class;
+      return `<article class="rel-card" data-relationship-class="${esc(rel.relationship_class)}" data-rel-weight="${w}">
           <div class="rel-head">
             <span class="rel-class">${esc(rel.relationship_class)}</span>
-            <span class="rel-weight">evidential weight ${w}/4 \u2014 ${esc(RELATIONSHIP_CLASS_LABEL[rel.relationship_class])}</span>
+            <span class="rel-weight">evidential weight ${w}/4 \u2014 ${esc(label)}</span>
           </div>
           <p class="rel-claim">${esc(rel.subject)} ${esc(rel.predicate)} ${esc(rel.object)}</p>
           <p class="rel-just">Basis: ${esc(rel.justification)}</p>
@@ -1515,7 +1528,7 @@
     ${actions.map((a) => {
       const p = authorityPresentation(a);
       const check2 = a.authority_check;
-      return `<div class="action" data-gate="${p.gate}" data-executable="${p.executable}" data-authority-basis="${check2?.basis ?? "none"}">
+      return `<div class="action" data-gate="${p.gate}" data-executable="${p.executable}" data-authority-basis="${esc(check2?.basis ?? "none")}">
           <p class="action-text">${esc(a.action)}</p>
           <p class="action-gate">${esc(p.label)}</p>
           ${check2 ? `<p class="action-note">Authority check \u2014 basis: ${esc(check2.basis)}; authorized: ${check2.authorized}; requires assent: ${check2.requires_assent}. ${esc(check2.note)}</p>` : ""}
@@ -1709,6 +1722,8 @@
   };
 
   // ui/src/app.ts
+  var RECORD_EXPORT_FORMAT = "guardianlink-cognitive-surface/record";
+  var RECORD_EXPORT_VERSION = 1;
   var SurfaceApp = class {
     constructor(root2) {
       this.root = root2;
@@ -1763,6 +1778,55 @@
         source: "fixture"
       });
     }
+    // Serialize the record for explicit export. Pure function of the
+    // record: two exports of the same record are byte-identical, and an
+    // export -> import -> export round-trip is byte-identical.
+    exportRecord() {
+      const payload = {
+        format: RECORD_EXPORT_FORMAT,
+        version: RECORD_EXPORT_VERSION,
+        entries: this.entries
+      };
+      return JSON.stringify(payload, null, 2);
+    }
+    // Load a record previously produced by exportRecord(). Replaces the
+    // in-memory record wholesale; validates the envelope and the entry
+    // shape before applying anything (a bad file changes nothing).
+    importRecord(json) {
+      const parsed = JSON.parse(json);
+      if (parsed.format !== RECORD_EXPORT_FORMAT || parsed.version !== RECORD_EXPORT_VERSION || !Array.isArray(parsed.entries)) {
+        throw new Error("not a cognitive-surface record export");
+      }
+      for (const e of parsed.entries) {
+        if (typeof e?.id !== "number" || typeof e?.seq !== "number" || typeof e?.question_text !== "string" || typeof e?.response !== "object" || e.response === null) {
+          throw new Error("record export contains a malformed entry");
+        }
+      }
+      const entries = parsed.entries;
+      this.entries = entries;
+      this.selectedId = entries.length ? entries[entries.length - 1].id : null;
+      this.nextSeq = entries.reduce((m, e) => Math.max(m, e.seq), 0) + 1;
+      this.expanded = /* @__PURE__ */ new Set();
+      for (const entry of entries) {
+        for (const l of entry.response.lenses) {
+          this.expanded.add(layerKey(entry.id, l.cluster_id, "raw"));
+        }
+      }
+      this.render();
+      return entries.length;
+    }
+    // Browser download of exportRecord(). Guarded so non-browser hosts
+    // (tests, SSR) can call the click path without a Blob URL API.
+    downloadRecord() {
+      const blob = new Blob([this.exportRecord()], { type: "application/json" });
+      if (typeof URL.createObjectURL !== "function") return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "guardianlink-record.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
     setView(view) {
       this.view = view;
       this.render();
@@ -1791,7 +1855,7 @@
       const holder = this.root.querySelector("#fixture-buttons");
       if (holder) {
         holder.innerHTML = CORPUS_FIXTURES.map(
-          (f) => `<button data-action="fixture" data-case-id="${f.case_id}">${f.case_id} \xB7 ${f.category}</button>`
+          (f) => `<button data-action="fixture" data-case-id="${esc(f.case_id)}">${esc(f.case_id)} \xB7 ${esc(f.category)}</button>`
         ).join("");
       }
     }
@@ -1805,6 +1869,20 @@
         else if (action === "peel") this.toggleLayer(el.dataset.layerKey);
         else if (action === "fixture") this.loadFixture(el.dataset.caseId);
         else if (action === "fixture-demo-context") this.loadDemoContext();
+        else if (action === "export-record") this.downloadRecord();
+      });
+      this.root.addEventListener("change", (ev) => {
+        const input = ev.target;
+        if (!input.matches("[data-import-file]")) return;
+        const file = input.files?.[0];
+        if (!file) return;
+        void file.text().then((text) => {
+          try {
+            this.importRecord(text);
+          } catch {
+          }
+          input.value = "";
+        });
       });
       this.root.addEventListener("submit", (ev) => {
         const form = ev.target;
