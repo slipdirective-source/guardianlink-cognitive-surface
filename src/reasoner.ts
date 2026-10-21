@@ -83,6 +83,9 @@ export interface Analysis {
     missing_context: boolean;
     conflicting_signals: boolean;
     sparse_history: boolean;
+    /** The record's evidence is old relative to the question's stated
+     * present (composed records, Experiment 003). */
+    stale_evidence?: boolean;
   };
 }
 
