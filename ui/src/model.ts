@@ -8,6 +8,7 @@
 // a SurfaceResponse produced by the pipeline, or to the record itself.
 
 import { ClusterOutput, SurfaceResponse } from "../../src/types";
+import { sha256Hex } from "./sha256";
 import {
   Analysis,
   AssertedRelation,
@@ -64,7 +65,97 @@ export interface RecordEntry {
   origin: EntryOrigin;
   context_label: string | null; // e.g. "demo sovereign record (fixture)"
   response: SurfaceResponse;
+  // Tamper-evident hash chain (see below). Absent on legacy entries
+  // imported from a v1 export — absence is displayed, never repaired.
+  chain?: { prev: string; hash: string };
 }
+
+// ---------- tamper-evident hash chain ----------
+// Each entry admitted since the chain existed carries
+// chain = { prev, hash }: prev is the previous entry's hash (or a
+// distinguished anchor), hash = SHA-256 over prev + the entry's
+// canonical projection. The projection covers the entry's evidentiary
+// content — its stamps, its question, and the pipeline's answer text
+// and cross-cut value (the deterministic pipeline makes the answer a
+// function of question + context, so these two pin the response's
+// substance; the full response object is present in the export for
+// inspection but is not itself hash-stable JSON).
+//
+// Verification is all-or-nothing per entry and never repairs: any
+// mismatch marks the record broken. Entries without chain data (v1
+// legacy imports) stay chain-less forever — import does not silently
+// upgrade their trust; entries appended after them anchor to
+// LEGACY_ANCHOR so the boundary between unverified history and
+// chained history is itself recorded.
+
+export const GENESIS_ANCHOR = "guardianlink-record-genesis";
+export const LEGACY_ANCHOR = "guardianlink-record-legacy-anchor";
+
+export function canonicalProjection(e: RecordEntry): string {
+  return JSON.stringify({
+    seq: e.seq,
+    at: e.at,
+    kind: e.kind,
+    origin: e.origin,
+    question_type: e.question_type,
+    question_text: e.question_text,
+    source: e.source,
+    context_label: e.context_label,
+    answer_text: e.response.answer_text,
+    uncertainty_value: e.response.uncertainty,
+  });
+}
+
+export function entryHash(e: RecordEntry, prev: string): string {
+  return sha256Hex(prev + "\n" + canonicalProjection(e));
+}
+
+/** The anchor a new entry chains onto, given the current record tail. */
+export function nextAnchor(entries: RecordEntry[]): string {
+  if (entries.length === 0) return GENESIS_ANCHOR;
+  const last = entries[entries.length - 1];
+  return last.chain ? last.chain.hash : LEGACY_ANCHOR;
+}
+
+export type ChainStatus = "verified" | "legacy-unverified" | "broken" | "empty";
+
+/**
+ * Verify a record's chain. "verified" requires every entry chained
+ * and every link recomputed equal, anchored at GENESIS_ANCHOR.
+ * A record with any chain-less entries can be at most
+ * "legacy-unverified" (its chained suffix must still verify, anchored
+ * at LEGACY_ANCHOR where the chained run begins). Any mismatch,
+ * reordering, or broken link is "broken" — never displayed as either
+ * of the other two.
+ */
+export function verifyChain(entries: RecordEntry[]): ChainStatus {
+  if (entries.length === 0) return "empty";
+  let expectedPrev: string | null = null;
+  let sawChained = false;
+  let sawLegacy = false;
+  for (const e of entries) {
+    if (!e.chain) {
+      sawLegacy = true;
+      expectedPrev = LEGACY_ANCHOR;
+      continue;
+    }
+    sawChained = true;
+    if (expectedPrev === null) expectedPrev = GENESIS_ANCHOR;
+    if (e.chain.prev !== expectedPrev) return "broken";
+    if (e.chain.hash !== entryHash(e, e.chain.prev)) return "broken";
+    expectedPrev = e.chain.hash;
+  }
+  if (!sawChained) return "legacy-unverified";
+  return sawLegacy ? "legacy-unverified" : "verified";
+}
+
+export const CHAIN_STATUS_LABEL: Record<ChainStatus, string> = {
+  verified: "hash chain verified",
+  "legacy-unverified":
+    "legacy record — contains entries without chain data (unverified history)",
+  broken: "HASH CHAIN BROKEN — record contents do not match their chain",
+  empty: "empty record",
+};
 
 // The shared analysis view of one lens output — the same extraction the
 // pipeline's own composer performs (surface.ts reads these signals).
