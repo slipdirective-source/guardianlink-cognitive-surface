@@ -160,6 +160,7 @@ export function buildClusterOutput(clusterId: string, input: SurfaceInput): Buil
     unknowns: analysis.unknowns,
     urgent_action: analysis.urgent_action,
     trajectory_null_reason: analysis.trajectory_null_reason,
+    analysis_signals: analysis.uncertainty_signals,
     validation: { valid: report.valid, violations: report.violations, repairs },
     reasoner_id: reasoner.id,
   };
