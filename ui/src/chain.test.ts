@@ -7,13 +7,17 @@
 //  - Import verifies BEFORE applying: a flipped byte or a reordering
 //    refuses the import wholesale and leaves the current record
 //    untouched (fail closed, never partial).
-//  - A valid v2 export round-trips byte-identical.
+//  - A valid v2 export round-trips to a byte-stable downgraded fixed
+//    point (board round 2: import downgrades provenance — the first
+//    re-export differs by design; see provenance.test.ts).
 //  - v1 exports import as legacy-unchained: displayed as
 //    legacy-unverified, never silently upgraded (legacy entries stay
 //    chain-less through re-export; new entries anchor to the legacy
 //    boundary).
 //  - A mutated in-memory entry verifies as broken, and a broken chain
-//    can never display as verified.
+//    can never display as consistent. (The status was renamed
+//    "verified" -> "consistent" in board round 2: the chain claims
+//    consistency, not authenticity, and the name now says so.)
 
 import { SurfaceApp, createApp } from "./app";
 import { LEGACY_ANCHOR, verifyChain } from "./model";
@@ -52,11 +56,11 @@ describe("chaining at admission", () => {
     expect(e1.chain?.prev).toBe("guardianlink-record-genesis");
     expect(e2.chain?.prev).toBe(e1.chain?.hash);
     expect(e3.chain?.prev).toBe(e2.chain?.hash);
-    expect(verifyChain(app.entries)).toBe("verified");
-    expect(app.chainStatus()).toBe("verified");
+    expect(verifyChain(app.entries)).toBe("consistent");
+    expect(app.chainStatus()).toBe("consistent");
     const status = root.querySelector("[data-chain-status]");
-    expect(status?.getAttribute("data-chain-status")).toBe("verified");
-    expect(status?.textContent).toContain("hash chain verified");
+    expect(status?.getAttribute("data-chain-status")).toBe("consistent");
+    expect(status?.textContent).toContain("hash chain consistent");
   });
 });
 
@@ -74,7 +78,7 @@ describe("import verification fails closed", () => {
     expect(() => target.importRecord(tampered)).toThrow(/hash chain verification failed/);
     expect(target.exportRecord()).toBe(before);
     expect(target.entries).toHaveLength(1);
-    expect(target.chainStatus()).toBe("verified");
+    expect(target.chainStatus()).toBe("consistent");
   });
 
   test("reordered entries refuse the import", () => {
@@ -102,7 +106,18 @@ describe("import verification fails closed", () => {
     expect(target.entries).toHaveLength(0);
   });
 
-  test("valid v2 export round-trips byte-identical", () => {
+  // NAMED CHANGE (board round 2, Fix A — import provenance
+  // downgrade): this test previously asserted export -> import ->
+  // export is byte-identical. Under the downgrade that is no longer
+  // the contract for a first import: the importing system did not
+  // witness the entries, so their effective origin becomes "import"
+  // and the file's stamps move to claimed provenance — the re-export
+  // differs from the original in exactly those fields. The new
+  // contract: the downgrade is a FIXED POINT (a second
+  // export -> import -> export is byte-identical), and the chain
+  // stays consistent across it. The downgrade's full semantics are
+  // pinned in provenance.test.ts.
+  test("valid v2 export round-trips to a byte-stable downgraded fixed point", () => {
     const { app } = setup();
     app.ask("My dog bit three people last month.", "relationships");
     app.submitEntry({
@@ -113,8 +128,13 @@ describe("import verification fails closed", () => {
     const exported = app.exportRecord();
     const { app: target } = setup();
     target.importRecord(exported);
-    expect(target.exportRecord()).toBe(exported);
-    expect(target.chainStatus()).toBe("verified");
+    const downgraded = target.exportRecord();
+    expect(downgraded).not.toBe(exported);
+    expect(target.chainStatus()).toBe("consistent");
+    const { app: target2 } = setup();
+    target2.importRecord(downgraded);
+    expect(target2.exportRecord()).toBe(downgraded);
+    expect(target2.chainStatus()).toBe("consistent");
   });
 });
 
@@ -168,7 +188,7 @@ describe("broken chains in memory", () => {
     const { root, app } = setup();
     const e = app.ask("My dog bit three people last month.", "relationships");
     app.ask("Downtown hiring is up 3% this year.", "position");
-    expect(app.chainStatus()).toBe("verified");
+    expect(app.chainStatus()).toBe("consistent");
     e.question_text = "My dog bit four people last month.";
     expect(verifyChain(app.entries)).toBe("broken");
     expect(app.chainStatus()).toBe("broken");
@@ -176,6 +196,6 @@ describe("broken chains in memory", () => {
     const status = root.querySelector("[data-chain-status]");
     expect(status?.getAttribute("data-chain-status")).toBe("broken");
     expect(status?.textContent).toContain("BROKEN");
-    expect(status?.textContent).not.toContain("hash chain verified");
+    expect(status?.textContent).not.toContain("hash chain consistent");
   });
 });
