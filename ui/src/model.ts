@@ -54,7 +54,23 @@ export const ENTRY_ORIGIN_LABEL: Record<EntryOrigin, string> = {
 export interface RecordEntry {
   id: number;
   seq: number;
-  at: string; // ISO timestamp stamped by the capture layer at admission
+  // `at` is the admission stamp, and its semantics are OBSERVED_AT:
+  // the moment THIS system admitted the entry, on this system's
+  // clock, stamped by the capture layer. It is never the time the
+  // entry's event is claimed to have happened — that is asserted_at
+  // below, a claim. Ordering and the hash chain read `at` (observed);
+  // staleness reasoning reads asserted times in the entry text and
+  // must never read `at` as an event time (see ui/README.md, time
+  // audit). For an entry admitted via import, `at` holds the value
+  // the file carried; it is then a claim too (see claimed_at) — the
+  // witnessed admission fact for such an entry is origin: "import".
+  at: string; // ISO timestamp; observed_at semantics (see above)
+  // The user's stated event time — when the user says the event
+  // happened. Optional, settable at the capture boundary as a
+  // distinct field, stored and displayed as a CLAIM ("stated …"),
+  // never merged into `at`. Part of the chain projection when
+  // present, so the claim itself is tamper-evident.
+  asserted_at?: string;
   question_type: string;
   question_text: string;
   // Provenance, shown in the UI: live input vs. labeled fixture.
@@ -63,11 +79,32 @@ export interface RecordEntry {
   // content claims: the text cannot set them.
   kind: EntryKind;
   origin: EntryOrigin;
+  // Claimed provenance (import downgrade, board round 2, 2026-10-21).
+  // On import, EVERY entry's effective origin becomes "import" — the
+  // import is the only capture event this system witnessed — and the
+  // stamps the FILE carried are preserved here as claims: visible in
+  // the record as claims, never as witnessed stamps. Absent on
+  // entries captured locally (their origin/at/kind ARE the witnessed
+  // stamps) and on legacy entries that carried no stamps to claim.
+  // Set only when absent: the first downgrade's claim wins, so a
+  // re-imported file cannot launder an earlier claim away.
+  claimed_origin?: EntryOrigin;
+  claimed_at?: string;
+  claimed_kind?: EntryKind;
   context_label: string | null; // e.g. "demo sovereign record (fixture)"
   response: SurfaceResponse;
   // Tamper-evident hash chain (see below). Absent on legacy entries
   // imported from a v1 export — absence is displayed, never repaired.
   chain?: { prev: string; hash: string };
+}
+
+/** True when this entry carries file-claimed provenance from an import. */
+export function hasClaimedProvenance(e: RecordEntry): boolean {
+  return (
+    e.claimed_origin !== undefined ||
+    e.claimed_at !== undefined ||
+    e.claimed_kind !== undefined
+  );
 }
 
 // ---------- tamper-evident hash chain ----------
@@ -80,6 +117,21 @@ export interface RecordEntry {
 // function of question + context, so these two pin the response's
 // substance; the full response object is present in the export for
 // inspection but is not itself hash-stable JSON).
+//
+// CLAIM BOUNDARY (board round 2, 2026-10-21): the chain claims
+// CONSISTENCY ONLY — these entries were chained together and are
+// unmodified since chaining. It does NOT claim AUTHENTICITY: anyone
+// can fabricate a self-consistent chain from scratch, so a consistent
+// chain says nothing about whether the events happened or whether
+// the stamps were ever witnessed by this system. That is why import
+// downgrades provenance (see claimed_* on RecordEntry): the chain
+// survives the downgrade because the projection is computed over the
+// CLAIMED stamps when claims are present — the chain binds the entry
+// as it was chained, and the downgrade governs what this system
+// treats as witnessed. Authenticity would require anchoring the
+// chain to something an importer cannot fabricate (e.g. a
+// sovereign-held key signature); that alternative is named, not
+// built, and not claimed (see ui/README.md).
 //
 // Verification is all-or-nothing per entry and never repairs: any
 // mismatch marks the record broken. Entries without chain data (v1
@@ -94,13 +146,23 @@ export const LEGACY_ANCHOR = "guardianlink-record-legacy-anchor";
 export function canonicalProjection(e: RecordEntry): string {
   return JSON.stringify({
     seq: e.seq,
-    at: e.at,
-    kind: e.kind,
-    origin: e.origin,
+    // The stamps AS CHAINED: for an entry carrying claimed provenance
+    // from an import, the chain was computed over the file's claimed
+    // stamps, so the projection reads them back — the downgrade is an
+    // admission-layer act and does not rewrite chained content. `at`
+    // enters under its documented meaning: observed_at, the admission
+    // stamp — never an event time.
+    at: e.claimed_at ?? e.at,
+    kind: e.claimed_kind ?? e.kind,
+    origin: e.claimed_origin ?? e.origin,
     question_type: e.question_type,
     question_text: e.question_text,
     source: e.source,
     context_label: e.context_label,
+    // asserted_at is chained content when present (the stated-time
+    // claim is itself tamper-evident); omitted when absent so chains
+    // computed before the field existed still verify.
+    ...(e.asserted_at !== undefined ? { asserted_at: e.asserted_at } : {}),
     answer_text: e.response.answer_text,
     uncertainty_value: e.response.uncertainty,
   });
@@ -117,11 +179,15 @@ export function nextAnchor(entries: RecordEntry[]): string {
   return last.chain ? last.chain.hash : LEGACY_ANCHOR;
 }
 
-export type ChainStatus = "verified" | "legacy-unverified" | "broken" | "empty";
+export type ChainStatus = "consistent" | "legacy-unverified" | "broken" | "empty";
 
 /**
- * Verify a record's chain. "verified" requires every entry chained
- * and every link recomputed equal, anchored at GENESIS_ANCHOR.
+ * Verify a record's chain. "consistent" requires every entry chained
+ * and every link recomputed equal, anchored at GENESIS_ANCHOR — and
+ * it means exactly that: the entries match their chain. It is a
+ * consistency claim, never an authenticity claim (see the claim
+ * boundary above); the status is named "consistent", not "verified",
+ * so the UI cannot say more than the chain establishes.
  * A record with any chain-less entries can be at most
  * "legacy-unverified" (its chained suffix must still verify, anchored
  * at LEGACY_ANCHOR where the chained run begins). Any mismatch,
@@ -146,11 +212,12 @@ export function verifyChain(entries: RecordEntry[]): ChainStatus {
     expectedPrev = e.chain.hash;
   }
   if (!sawChained) return "legacy-unverified";
-  return sawLegacy ? "legacy-unverified" : "verified";
+  return sawLegacy ? "legacy-unverified" : "consistent";
 }
 
 export const CHAIN_STATUS_LABEL: Record<ChainStatus, string> = {
-  verified: "hash chain verified",
+  consistent:
+    "hash chain consistent — the entries match their chain (consistency, not authenticity)",
   "legacy-unverified":
     "legacy record — contains entries without chain data (unverified history)",
   broken: "HASH CHAIN BROKEN — record contents do not match their chain",
