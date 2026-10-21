@@ -114,13 +114,47 @@ holds the file, and imports it. Reloading without importing starts
 empty, and that emptiness is the correct default.
 
 **Mechanics:** the export envelope is
-`{format: "guardianlink-cognitive-surface/record", version: 1, entries}`
+`{format: "guardianlink-cognitive-surface/record", version: 2, entries}`
 — a pure function of the record, so export → import → export is
 byte-identical. Import validates the envelope and every entry's shape
 before applying anything; a malformed file changes nothing. (The live
 pipeline response also embeds cluster objects with functions in
 `ranked_clusters`; the export is the record's data projection —
 rendering consumes only data fields.)
+
+## Tamper-evident history — decided policy (2026-10-21)
+
+The record is hash-chained (version 2 above). Every entry admitted
+carries `chain: { prev, hash }`, computed at admission in the capture
+layer: `prev` is the previous entry's hash (or a distinguished
+anchor) and `hash` is SHA-256 over `prev` plus the entry's
+**canonical projection** — a fixed-key-order JSON of the entry's
+evidentiary content: its stamps (`seq`, `at`, `kind`, `origin`), its
+`question_type` / `question_text` / `source` / `context_label`, and
+the pipeline's `answer_text` and cross-cut uncertainty value. The
+full response object travels in the export for inspection but is not
+itself hash-stable JSON; because the backend is deterministic, the
+answer text + uncertainty pin the response's substance. SHA-256 is
+implemented in `ui/src/sha256.ts` (synchronous, zero dependencies —
+WebCrypto is async-only) and pinned against published test vectors.
+
+- Import verifies a v2 file's whole chain on the entries exactly as
+  they appear in the file, before applying or normalizing anything.
+  Any mismatch — a flipped byte, a reordered entry, a missing link —
+  **refuses the import wholesale**: the current record is untouched
+  and the error is surfaced. There is no partial import.
+- **v1 decision:** v1 exports (no chain data) remain importable as
+  **legacy-unchained** records. Their status is displayed as
+  `legacy-unverified` and they are **never silently upgraded**:
+  legacy entries stay chain-less through re-export. Entries appended
+  after a legacy import chain onto a distinguished legacy anchor
+  (`guardianlink-record-legacy-anchor`), so the boundary between
+  unverified history and chained history is itself in the chain.
+- **Display:** the record panel shows the live verification status
+  (`data-chain-status`): `verified`, `legacy-unverified`, or
+  `broken`. Verification is recomputed from the entries, never
+  stored as a claim — a mutated entry verifies as broken, and a
+  broken chain can never render as verified.
 
 _Docket: front-end hardening pass, board docket (Claude) via Caleb,
 2026-10-21. The same pass added: the structural no-affordance test for
