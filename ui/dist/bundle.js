@@ -1497,18 +1497,31 @@
     fixture: "frozen-corpus fixture",
     import: "imported record file"
   };
+  function hasClaimedProvenance(e) {
+    return e.claimed_origin !== void 0 || e.claimed_at !== void 0 || e.claimed_kind !== void 0;
+  }
   var GENESIS_ANCHOR = "guardianlink-record-genesis";
   var LEGACY_ANCHOR = "guardianlink-record-legacy-anchor";
   function canonicalProjection(e) {
     return JSON.stringify({
       seq: e.seq,
-      at: e.at,
-      kind: e.kind,
-      origin: e.origin,
+      // The stamps AS CHAINED: for an entry carrying claimed provenance
+      // from an import, the chain was computed over the file's claimed
+      // stamps, so the projection reads them back — the downgrade is an
+      // admission-layer act and does not rewrite chained content. `at`
+      // enters under its documented meaning: observed_at, the admission
+      // stamp — never an event time.
+      at: e.claimed_at ?? e.at,
+      kind: e.claimed_kind ?? e.kind,
+      origin: e.claimed_origin ?? e.origin,
       question_type: e.question_type,
       question_text: e.question_text,
       source: e.source,
       context_label: e.context_label,
+      // asserted_at is chained content when present (the stated-time
+      // claim is itself tamper-evident); omitted when absent so chains
+      // computed before the field existed still verify.
+      ...e.asserted_at !== void 0 ? { asserted_at: e.asserted_at } : {},
       answer_text: e.response.answer_text,
       uncertainty_value: e.response.uncertainty
     });
@@ -1539,10 +1552,10 @@
       expectedPrev = e.chain.hash;
     }
     if (!sawChained) return "legacy-unverified";
-    return sawLegacy ? "legacy-unverified" : "verified";
+    return sawLegacy ? "legacy-unverified" : "consistent";
   }
   var CHAIN_STATUS_LABEL = {
-    verified: "hash chain verified",
+    consistent: "hash chain consistent \u2014 the entries match their chain (consistency, not authenticity)",
     "legacy-unverified": "legacy record \u2014 contains entries without chain data (unverified history)",
     broken: "HASH CHAIN BROKEN \u2014 record contents do not match their chain",
     empty: "empty record"
@@ -1679,14 +1692,16 @@
   </main>
   ${renderAskPanel()}
   ${renderFixturePanel()}
-  ${renderRecordPanel(verifyChain(state.entries))}`;
+  ${renderRecordPanel(state.entries, verifyChain(state.entries))}`;
   }
-  function renderRecordPanel(status) {
+  function renderRecordPanel(entries, status) {
+    const imported = entries.filter((e) => e.origin === "import").length;
     return `<section class="record-panel">
     <h2>The record \u2014 persistence is explicit, never ambient</h2>
     <p class="record-policy">This record lives in memory only. It is not written to browser storage.
     Export downloads it as a JSON file; import loads a file you exported. Reloading without importing starts empty.</p>
     <p class="chain-status">Tamper evidence: <span data-chain-status="${esc(status)}">${esc(CHAIN_STATUS_LABEL[status])}</span></p>
+    ${imported ? `<p class="record-provenance" data-record-provenance="imported-claim">Record provenance: ${imported} of ${entries.length} ${entries.length === 1 ? "entry" : "entries"} arrived by import \u2014 their provenance is imported-claim (the file's stamps, preserved as claims), not witnessed by this system.</p>` : ""}
     <button data-action="export-record">Export record (JSON download)</button>
     <label class="import-label">Import a record export
       <input type="file" data-import-file accept="application/json,.json" />
@@ -1702,6 +1717,36 @@
         </button>`
     ).join("")}
   </div>`;
+  }
+  function entryMetaLine(entry) {
+    const parts = [`#${entry.seq}`];
+    if (entry.origin === "import") {
+      parts.push("admitted via import");
+      parts.push(esc(ENTRY_ORIGIN_LABEL[entry.origin] ?? entry.origin));
+      if (hasClaimedProvenance(entry)) {
+        const claims = [];
+        if (entry.claimed_origin !== void 0) {
+          claims.push(`origin ${esc(ENTRY_ORIGIN_LABEL[entry.claimed_origin] ?? entry.claimed_origin)}`);
+        }
+        if (entry.claimed_at !== void 0) claims.push(`admitted ${esc(entry.claimed_at)}`);
+        if (entry.claimed_kind !== void 0) claims.push(`kind ${esc(entry.claimed_kind)}`);
+        parts.push(`file claims: ${claims.join(", ")} \u2014 claims, not witnessed here`);
+      }
+    } else {
+      parts.push(`admitted ${esc(entry.at)}`);
+      parts.push(esc(ENTRY_ORIGIN_LABEL[entry.origin] ?? entry.origin));
+      parts.push(esc(entry.kind));
+      parts.push("stamped at capture");
+    }
+    if (entry.asserted_at !== void 0) {
+      parts.push(`stated event time: ${esc(entry.asserted_at)} (the user's claim \u2014 not the admission time)`);
+    }
+    if (entry.context_label) parts.push(esc(entry.context_label));
+    return parts.join(" \xB7 ");
+  }
+  function provenanceShort(entry) {
+    const base = entry.origin === "import" ? "imported record file \u2014 provenance is the file's claim, not witnessed here" : ENTRY_ORIGIN_LABEL[entry.origin] ?? entry.origin;
+    return entry.asserted_at !== void 0 ? `${base} \xB7 stated event time ${entry.asserted_at}` : base;
   }
   function renderEmpty() {
     return `<section class="empty">
@@ -1723,7 +1768,7 @@
     ${urgent ? renderUrgent(urgent) : ""}
     <section class="now" data-section="position-now">
       <h1>You, now</h1>
-      <p class="entry-meta">#${entry.seq} \xB7 ${esc(entry.at)} \xB7 ${esc(ENTRY_ORIGIN_LABEL[entry.origin] ?? entry.origin)} \xB7 ${esc(entry.kind)} \xB7 stamped at capture${entry.context_label ? ` \xB7 ${esc(entry.context_label)}` : ""}</p>
+      <p class="entry-meta">${entryMetaLine(entry)}</p>
       <p class="question-text">${esc(entry.question_text)}</p>
       <p class="position-statement">${esc(r.output.summary)}</p>
     </section>
@@ -1837,9 +1882,9 @@
       return `<li class="record-item" data-record-entry="${e.id}">
         <button data-action="select-entry" data-entry-id="${e.id}" data-selected="${state.selected?.id === e.id}">
           <span class="rec-seq">#${e.seq}</span>
-          <span class="rec-when">${esc(e.at)}</span>
+          <span class="rec-when">admitted ${esc(e.at)}</span>
           <span class="rec-q">${esc(e.question_text)}</span>
-          <span class="rec-meta">primary lens ${esc(e.response.cluster_id)} \xB7 ${esc(e.kind)} \xB7 ${esc(ENTRY_ORIGIN_LABEL[e.origin] ?? e.origin)} \xB7 uncertainty ${e.response.uncertainty.toFixed(2)}${urgent ? " \xB7 URGENT ACTION ON RECORD" : ""}</span>
+          <span class="rec-meta">primary lens ${esc(e.response.cluster_id)} \xB7 ${esc(e.kind)} \xB7 ${esc(provenanceShort(e))} \xB7 uncertainty ${e.response.uncertainty.toFixed(2)}${urgent ? " \xB7 URGENT ACTION ON RECORD" : ""}</span>
         </button>
       </li>`;
     }).join("");
@@ -1959,7 +2004,9 @@
     <h2>Add to the record \u2014 the capture boundary</h2>
     <p class="capture-policy">Source and time are stamped by this form when the entry is admitted \u2014
     they are never taken from the entry's own text. An entry is a claim from its stamped source,
-    admitted to the raw layer only; what it supports beyond that is the pipeline's work, not ingestion's.</p>
+    admitted to the raw layer only; what it supports beyond that is the pipeline's work, not ingestion's.
+    Two clocks are kept apart: the admission stamp is this system's clock (observed), and the optional
+    stated event time below is your claim about when it happened (asserted) \u2014 the two are never merged.</p>
     <form id="ask-form">
       <label>Entry kind
         <select name="entry_kind">
@@ -1984,6 +2031,9 @@
       </label>
       <label>Entry text
         <input name="qtext" type="text" autocomplete="off" placeholder="The observation or question, in your own words" />
+      </label>
+      <label>Stated event time (optional \u2014 your claim, kept distinct from the admission stamp)
+        <input name="asserted_at" type="text" autocomplete="off" placeholder="e.g. 2026-10-20 or 2026-10-20 09:15 \u2014 when you say it happened" />
       </label>
       <label class="demo-toggle"><input name="demo_context" type="checkbox" /> attach the demo sovereign record (fixture) as context</label>
       <button type="submit">Record entry \u2014 through the pipeline</button>
@@ -2114,6 +2164,9 @@
       const entry = {
         id: this.nextSeq,
         seq: this.nextSeq,
+        // observed_at: this system's clock at admission. The stated
+        // event time, when the user gives one, is asserted_at — a
+        // separate field, never this one.
         at: (/* @__PURE__ */ new Date()).toISOString(),
         question_type: type,
         question_text: text,
@@ -2121,6 +2174,7 @@
         kind: opts.kind ?? "question",
         origin: opts.origin ?? (opts.source === "fixture" ? "fixture" : "manual_entry"),
         context_label: opts.contextLabel ?? null,
+        ...opts.assertedAt ? { asserted_at: opts.assertedAt } : {},
         response
       };
       const anchor = nextAnchor(this.entries);
@@ -2147,6 +2201,7 @@
       return this.ask(text, type, {
         kind: sub.kind,
         origin: sub.origin,
+        assertedAt: sub.assertedAt,
         sovereignContext: sub.sovereignContext ?? null,
         contextLabel: sub.contextLabel ?? null
       });
@@ -2203,7 +2258,16 @@
         }
       }
       for (const e of entries) {
-        if (e.origin === void 0) e.origin = "import";
+        if (e.claimed_origin === void 0 && e.origin !== void 0) {
+          e.claimed_origin = e.origin;
+        }
+        if (e.claimed_at === void 0 && typeof e.at === "string") {
+          e.claimed_at = e.at;
+        }
+        if (e.claimed_kind === void 0 && e.kind !== void 0) {
+          e.claimed_kind = e.kind;
+        }
+        e.origin = "import";
         if (e.kind === void 0) e.kind = "question";
       }
       this.entries = entries;
@@ -2302,11 +2366,13 @@
         const originRaw = String(data.get("entry_origin") ?? "manual_entry");
         const origin = originRaw === "sovereign_dictation" ? "sovereign_dictation" : "manual_entry";
         const demo = data.get("demo_context") === "on";
+        const assertedAt = String(data.get("asserted_at") ?? "").trim();
         this.submitEntry({
           kind,
           text,
           questionType: String(data.get("qtype") ?? "position"),
           origin,
+          assertedAt: assertedAt ? assertedAt : void 0,
           sovereignContext: demo ? DEMO_SOVEREIGN_CONTEXT : null,
           contextLabel: demo ? DEMO_CONTEXT_LABEL : null
         });
