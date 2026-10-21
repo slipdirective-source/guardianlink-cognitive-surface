@@ -5,7 +5,7 @@
 
 import { answer } from "../../src/surface";
 import { LensId, RecordEntry, ViewId } from "./model";
-import { layerKey, renderApp } from "./render";
+import { esc, layerKey, renderApp } from "./render";
 import {
   CORPUS_FIXTURES,
   DEMO_CONTEXT_LABEL,
@@ -16,6 +16,22 @@ export interface AskOptions {
   sovereignContext?: Record<string, unknown> | null;
   contextLabel?: string | null;
   source?: "live" | "fixture";
+}
+
+// --- Record persistence policy (decided 2026-10-21, board docket via
+// Caleb; see ui/README.md). The record lives IN MEMORY ONLY. Nothing is
+// written to localStorage, sessionStorage, or IndexedDB — silent browser
+// persistence of longitudinal personal data would sit outside the
+// fail-closed story. The record crosses a reload only through an
+// explicit, user-invoked export (a JSON file the user downloads) and an
+// explicit import of such a file.
+export const RECORD_EXPORT_FORMAT = "guardianlink-cognitive-surface/record";
+export const RECORD_EXPORT_VERSION = 1;
+
+export interface RecordExport {
+  format: typeof RECORD_EXPORT_FORMAT;
+  version: typeof RECORD_EXPORT_VERSION;
+  entries: RecordEntry[];
 }
 
 export class SurfaceApp {
@@ -78,6 +94,68 @@ export class SurfaceApp {
     });
   }
 
+  // Serialize the record for explicit export. Pure function of the
+  // record: two exports of the same record are byte-identical, and an
+  // export -> import -> export round-trip is byte-identical.
+  exportRecord(): string {
+    const payload: RecordExport = {
+      format: RECORD_EXPORT_FORMAT,
+      version: RECORD_EXPORT_VERSION,
+      entries: this.entries,
+    };
+    return JSON.stringify(payload, null, 2);
+  }
+
+  // Load a record previously produced by exportRecord(). Replaces the
+  // in-memory record wholesale; validates the envelope and the entry
+  // shape before applying anything (a bad file changes nothing).
+  importRecord(json: string): number {
+    const parsed = JSON.parse(json) as Partial<RecordExport>;
+    if (
+      parsed.format !== RECORD_EXPORT_FORMAT ||
+      parsed.version !== RECORD_EXPORT_VERSION ||
+      !Array.isArray(parsed.entries)
+    ) {
+      throw new Error("not a cognitive-surface record export");
+    }
+    for (const e of parsed.entries) {
+      if (
+        typeof e?.id !== "number" ||
+        typeof e?.seq !== "number" ||
+        typeof e?.question_text !== "string" ||
+        typeof e?.response !== "object" ||
+        e.response === null
+      ) {
+        throw new Error("record export contains a malformed entry");
+      }
+    }
+    const entries = parsed.entries as RecordEntry[];
+    this.entries = entries;
+    this.selectedId = entries.length ? entries[entries.length - 1].id : null;
+    this.nextSeq = entries.reduce((m, e) => Math.max(m, e.seq), 0) + 1;
+    this.expanded = new Set<string>();
+    for (const entry of entries) {
+      for (const l of entry.response.lenses) {
+        this.expanded.add(layerKey(entry.id, l.cluster_id as LensId, "raw"));
+      }
+    }
+    this.render();
+    return entries.length;
+  }
+
+  // Browser download of exportRecord(). Guarded so non-browser hosts
+  // (tests, SSR) can call the click path without a Blob URL API.
+  downloadRecord(): void {
+    const blob = new Blob([this.exportRecord()], { type: "application/json" });
+    if (typeof URL.createObjectURL !== "function") return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "guardianlink-record.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   setView(view: ViewId): void {
     this.view = view;
     this.render();
@@ -111,7 +189,7 @@ export class SurfaceApp {
     if (holder) {
       holder.innerHTML = CORPUS_FIXTURES.map(
         (f) =>
-          `<button data-action="fixture" data-case-id="${f.case_id}">${f.case_id} · ${f.category}</button>`
+          `<button data-action="fixture" data-case-id="${esc(f.case_id)}">${esc(f.case_id)} · ${esc(f.category)}</button>`
       ).join("");
     }
   }
@@ -126,6 +204,22 @@ export class SurfaceApp {
       else if (action === "peel") this.toggleLayer(el.dataset.layerKey as string);
       else if (action === "fixture") this.loadFixture(el.dataset.caseId as string);
       else if (action === "fixture-demo-context") this.loadDemoContext();
+      else if (action === "export-record") this.downloadRecord();
+    });
+    this.root.addEventListener("change", (ev) => {
+      const input = ev.target as HTMLInputElement;
+      if (!input.matches("[data-import-file]")) return;
+      const file = input.files?.[0];
+      if (!file) return;
+      void file.text().then((text) => {
+        try {
+          this.importRecord(text);
+        } catch {
+          // A malformed import changes nothing (validated before apply).
+          // The record on screen is untouched; no silent partial state.
+        }
+        input.value = "";
+      });
     });
     this.root.addEventListener("submit", (ev) => {
       const form = ev.target as HTMLFormElement;
