@@ -151,10 +151,16 @@ describe("legacy imports are stamped honestly", () => {
   test("an entry without stamps is stamped origin=import on admission; stamped entries keep theirs", () => {
     const { app } = setup();
     app.submitEntry({ kind: "observation", text: "A witnessed entry.", origin: "manual_entry" });
+    // This scenario is a LEGACY (v1) file: pre-stamp, pre-chain.
+    // (Changed in the item-2 hash-chain pass: the same manipulation
+    // inside a v2 file is a broken chain and is refused — covered in
+    // chain.test.ts. Legacy stamping is a v1 behavior.)
     const exported = JSON.parse(app.exportRecord()) as {
+      version: number;
       entries: Record<string, unknown>[];
     };
-    // Simulate a pre-stamp (v1-era) entry traveling in the same file.
+    exported.version = 1;
+    for (const e of exported.entries) delete e["chain"];
     const legacy = JSON.parse(JSON.stringify(exported.entries[0])) as Record<string, unknown>;
     delete legacy["origin"];
     delete legacy["kind"];
