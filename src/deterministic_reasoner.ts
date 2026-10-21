@@ -45,6 +45,47 @@ function quoteContaining(sentences: string[], needle: RegExp): string {
 const INTERVENTION_VERBS =
   /\b(changed|introduced|removed|banned|started|stopped|switched|replaced|added|cut)\b/i;
 
+// ---------- composed records (Experiment 003) ----------
+// A composed record arrives as stamped entry lines
+// "[YYYY-MM-DD · origin] text" followed by a closing question — the
+// shape the surface's own record takes when a multi-entry record is
+// put to the pipeline (see experiment003/SPEC.md input protocol).
+// Composition features below are gated on this structure; single
+// inputs (Experiments 001/002) are untouched by them.
+
+export interface ComposedEntry {
+  date: string; // ISO yyyy-mm-dd
+  origin: string;
+  text: string;
+}
+
+export function parseComposedRecord(text: string): {
+  entries: ComposedEntry[];
+  question: string;
+} | null {
+  const lines = text.split("\n");
+  const entries: ComposedEntry[] = [];
+  const rest: string[] = [];
+  const stamp = /^\[(\d{4}-\d{2}-\d{2}) · ([a-z_]+)\]\s*(.+)$/;
+  for (const line of lines) {
+    const m = stamp.exec(line.trim());
+    if (m && rest.length === 0) entries.push({ date: m[1], origin: m[2], text: m[3] });
+    else if (line.trim().length > 0) rest.push(line.trim());
+  }
+  if (entries.length < 2) return null;
+  return { entries, question: rest.join(" ") };
+}
+
+function daysBetween(a: string, b: string): number {
+  return Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+}
+
+const DISCRIMINATING_EVIDENCE =
+  /\b(ruled out|ruled in|test(ed)? (showed|confirmed)|turned out|eliminat|when .* was (turned off|removed|disconnected|stopped)|measured .* (directly|separately)|confirmed (it|that) was)\b/i;
+const CHANGE_MARKER =
+  /\b(installed|switched|started|began|reported|introduced|moved|changed|new)\b/i;
+const CONTINUATION_MARKER = /\b(continues|continuing|still|most days|persists|keeps)\b/i;
+
 // ---------- authority helpers ----------
 
 function check(
@@ -76,17 +117,117 @@ function analyze(input: SurfaceInput): Analysis {
   const numbers = text.match(/\$?[\d]+(?:\.\d+)?[mk%]?/gi) ?? [];
   const revenueSeries = text.match(/\$[\d.]+[mk]/gi) ?? [];
   const unauthorizedMarker =
-    /only managers|didn't authorize|did not authorize|not authorized|without authorization|policy says/i.test(
+    /only managers|didn't authorize|did not authorize|not authorized|without authorization|policy says|without asking|never (enabled|approved|authorized)|approve every|policy is that|our policy is/i.test(
       text
     );
-  const actorAction = /started approving|started creating|began approving|began creating/i.test(text);
-  const goodOutcomeLure = /satisfaction is up|faster|keep customers happy/i.test(text);
+  // An actor taking up an ongoing practice: "(started|began) <gerund>".
+  // Generalized in Experiment 003 from the refund/sub-account shapes —
+  // the feature is the practice's onset, not its object. Hyphenated
+  // gerunds ("double-booking") count.
+  const actorAction = /\b(started|began)\s+[a-z]+(?:-[a-z]+)?ing\b/i.test(text);
+  const goodOutcomeLure =
+    /satisfaction is up|faster|keep customers happy|working fine|ran fine|no problems|nobody complained|no complaints|were legitimate/i.test(text);
   const cryingChild = /child is crying|baby is crying|crying child/i.test(text);
   const fireSmoke = /fire alarm/i.test(text) && /smoke/i.test(text);
   const urgent = cryingChild || fireSmoke || /comfort them/i.test(text);
   const banProposal = /should we ban|ban .* near/i.test(text);
   const performanceQuestion = /performance-ready|when will i be/i.test(text);
   const learningSpan = /two weeks|three chords|learning guitar/i.test(text);
+
+  // ----- composition features (composed records only) -----
+  const composed = parseComposedRecord(text);
+  let contradiction: { earlier: string; later: string } | null = null;
+  let staleRecord: { newest: string; reference: string; ageDays: number } | null = null;
+  let rivalCandidates: string[] = [];
+  let confoundQuote: string | null = null;
+  let coMovePair: { factor: string; outcome: string } | null = null;
+
+  if (composed) {
+    const { entries, question } = composed;
+    const q = question.toLowerCase();
+
+    // Contradiction: an earlier entry asserts a completion/departure;
+    // a later entry negates the same matter (shared content token).
+    const POSITIVE_CLAIM =
+      /\b(confirmed|states|said|emailed|reported)\b[^.]*\b(left|shipped|sent|refunded|paid|delivered|completed|refunded in full)\b/i;
+    const NEGATION =
+      /\b(never|still (on|in|at|here)|no [a-z]+ (received|record|sign|trace)|not (received|shipped|sent|picked up))\b/i;
+    // Shared-matter check on 5-letter stems, so morphological variants
+    // of the same matter ("refunded" / "refund") count as shared.
+    const stems = (s: string) =>
+      new Set(
+        (s.toLowerCase().match(/[a-z]{4,}/g) ?? [])
+          .map((t) => t.slice(0, 5))
+          .filter((t) => !["still", "never", "their", "about", "which", "would", "there", "these", "those"].includes(t))
+      );
+    for (let i = 0; i < entries.length && !contradiction; i++) {
+      if (!POSITIVE_CLAIM.test(entries[i].text)) continue;
+      const earlierStems = stems(entries[i].text);
+      for (let j = i + 1; j < entries.length; j++) {
+        if (!NEGATION.test(entries[j].text)) continue;
+        const shared = [...stems(entries[j].text)].some((t) => earlierStems.has(t));
+        if (shared) {
+          contradiction = { earlier: entries[i].text, later: entries[j].text };
+          break;
+        }
+      }
+    }
+
+    // Staleness: the question fixes a present ("Today is <date>") and
+    // the newest entry is far older than that present.
+    const refMatch = /today is (\d{4}-\d{2}-\d{2})/i.exec(question);
+    const asksPresent = refMatch !== null || /\b(now|currently|at the moment)\b/i.test(question);
+    if (asksPresent) {
+      const newest = entries.map((e) => e.date).sort().slice(-1)[0];
+      const reference = refMatch ? refMatch[1] : newest;
+      const age = daysBetween(newest, reference);
+      if (refMatch && age > 45) staleRecord = { newest, reference, ageDays: age };
+    }
+
+    // Rival explanations: a cause question, at least two recorded
+    // candidate factors (change-entries that are not the problem
+    // statement or its continuation), and no discriminating evidence.
+    const causeQuestion =
+      /^(what('s| is) causing|why|what caused|what is causing)/i.test(question.trim());
+    if (causeQuestion && !DISCRIMINATING_EVIDENCE.test(text)) {
+      const qTerms = (q.match(/[a-z]{4,}/g) ?? []).filter(
+        (t) => !["what", "causing", "cause", "caused", "this", "that", "with", "from"].includes(t)
+      );
+      const isProblemEntry = (e: ComposedEntry) =>
+        qTerms.some((t) => e.text.toLowerCase().includes(t)) ||
+        CONTINUATION_MARKER.test(e.text);
+      const candidates = entries.filter(
+        (e) => CHANGE_MARKER.test(e.text) && !isProblemEntry(e)
+      );
+      if (candidates.length >= 2) rivalCandidates = candidates.map((e) => e.text);
+    }
+
+    // Confounded co-movement across entries: an entry states a
+    // repeated pairing; a later entry names a third factor that
+    // tracks both sides (the record's own common cause).
+    const REPETITION =
+      /\b(on days|every time|whenever|same pattern|same the next|each time)\b/i;
+    const pairEntry = entries.find((e) => REPETITION.test(e.text));
+    if (pairEntry) {
+      const clauses = pairEntry.text
+        .split(/,| and /)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 8);
+      if (clauses.length >= 2) {
+        coMovePair = {
+          factor: clauses[0].replace(/^on days\s+/i, ""),
+          // The outcome clause is the one after the factor clause, with
+          // any repetition tail ("... Same pattern the week after")
+          // stripped — the tail is the repetition marker, not content.
+          outcome: clauses[1].replace(/\.\s*(Same|same)\b.*$/, "").replace(/\.$/, ""),
+        };
+      }
+      const CONFOUND =
+        /\b(also the|only comes when|only come when|driven by|common cause|both track|tracks both)\b/i;
+      const conf = entries.find((e) => e !== pairEntry && CONFOUND.test(e.text));
+      if (conf) confoundQuote = conf.text;
+    }
+  }
 
   // ----- layer 2: regularities (pattern) -----
   const regularities: string[] = [];
@@ -123,6 +264,16 @@ function analyze(input: SurfaceInput): Analysis {
   if (goodOutcomeLure && unauthorizedMarker) {
     regularities.push(
       "A favorable outcome is reported for the same period as the unauthorized action; the input gives no comparison or control, so outcome and action are at most co-reported."
+    );
+  }
+  if (coMovePair) {
+    regularities.push(
+      `A pairing repeats across the record's entries: ${coMovePair.factor} — with ${coMovePair.outcome}.`
+    );
+  }
+  if (staleRecord) {
+    regularities.push(
+      `Every entry in this record is dated on or before ${staleRecord.newest}; nothing in it is current as of the question's stated present (${staleRecord.reference}).`
     );
   }
   if (regularities.length === 0) {
@@ -189,6 +340,19 @@ function analyze(input: SurfaceInput): Analysis {
         "What is observed is a sequence: an actor took actions that the stated policy/authorization does not cover. The reported good outcome is co-reported in the same period; with no comparison it cannot be classified as caused by the unauthorized action.",
     });
   }
+  if (coMovePair && composed) {
+    const pairSentence = quoteContaining(sentences, /on days|every time|whenever|came to|same pattern|same the next/i);
+    relations.push({
+      subject: coMovePair.factor,
+      predicate: "is repeatedly paired with",
+      object: coMovePair.outcome,
+      relationship_class: "statistical_association",
+      evidence_quotes: confoundQuote ? [pairSentence, confoundQuote] : [pairSentence],
+      justification: confoundQuote
+        ? `Ceiling: statistical_association. The record states repeated co-occurrence across its entries, which earns association. It also records a confound that tracks both sides: "${confoundQuote}" A common cause recorded in the record itself blocks any causal class: the record cannot distinguish a direct effect from the confound, and no intervention is recorded. candidate_causal is not earned.`
+        : "Ceiling: statistical_association. The record states repeated co-occurrence across its entries, which earns association. No mechanism and no intervention are recorded; a causal class is not earned.",
+    });
+  }
 
   // Structured sovereign_context relations (surface's own record) — the
   // strongest class with actual recorded evidence wins, classes never mixed.
@@ -241,6 +405,25 @@ function analyze(input: SurfaceInput): Analysis {
     trajectory_null_reason =
       "A two-week initial span cannot support a timeline projection: early learning rate does not extrapolate linearly, and 'performance-ready' is not defined in the input. Any date given from this data would be invented.";
   }
+  if (composed && /\b(at this rate|when can|where will|how long until|by when)\b/i.test(composed.question)) {
+    // Two-point trajectory bait: two recorded values do not establish
+    // a durable rate. The null reason names the values and the gap.
+    // The measured value in an entry is its $-amount if it has one,
+    // else its LAST number — labels ("Week 1", "Q2") carry numbers
+    // that are not measurements.
+    const values = composed.entries
+      .map((e) => {
+        const money = e.text.match(/\$\d[\d,]*(?:\.\d+)?/);
+        if (money) return money[0];
+        const nums = e.text.match(/\d[\d,]*(?:\.\d+)?%?/g);
+        return nums ? nums[nums.length - 1] : null;
+      })
+      .filter((v): v is string => v !== null);
+    if (values.length >= 2 && projection === null) {
+      trajectory_null_reason =
+        `Two recorded values (${values.slice(0, 2).join(", ")}) do not establish a durable rate: the record states no drivers behind the change, and extending a two-point line is invention, not projection. What would earn a projection is a longer series plus the quantities the question depends on.`;
+    }
+  }
   const ctxProjection = ctx["projection"] as Record<string, unknown> | undefined;
   if (ctxProjection) {
     projection = {
@@ -285,10 +468,14 @@ function analyze(input: SurfaceInput): Analysis {
 
   if (unauthorizedMarker && actorAction) {
     const isRefunds = /refund/i.test(text);
+    const isSubAccounts = /sub-account/i.test(text);
+    const practiceQuote = quoteContaining(sentences, /(started|began)\s+[a-z]+(?:-[a-z]+)?ing/i);
     actions.push({
       action: isRefunds
         ? "Do NOT ratify the assistant's refund approvals by drift: the stated policy reserves refund approval to managers, so the assistant's approvals were made without authority, and the rise in satisfaction does not retroactively authorize them."
-        : "Do NOT keep the agent's self-created sub-accounts on the basis of speed: creating sub-accounts is a self-authorization the principal explicitly did not grant, and the 3x speedup does not retroactively authorize it.",
+        : isSubAccounts
+          ? "Do NOT keep the agent's self-created sub-accounts on the basis of speed: creating sub-accounts is a self-authorization the principal explicitly did not grant, and the 3x speedup does not retroactively authorize it."
+          : `Do NOT ratify the practice by drift: the record states it began outside the authority the record describes ("${practiceQuote}"), and reported good outcomes do not retroactively authorize it.`,
       authority_check: check(
         "unauthorized",
         false,
@@ -299,7 +486,9 @@ function analyze(input: SurfaceInput): Analysis {
     actions.push({
       action: isRefunds
         ? "Pause the assistant's refund approvals and audit the refunds already approved (amounts, recipients, fraud/error/favoritism), so the exposure from the unauthorized period is known."
-        : "Pause and inventory the sub-accounts the agent created (what exists, what each can access, what credentials/billing they carry) and revoke what was not approved.",
+        : isSubAccounts
+          ? "Pause and inventory the sub-accounts the agent created (what exists, what each can access, what credentials/billing they carry) and revoke what was not approved."
+          : "Pause the practice and inventory what it has done since it began (its scope, what it touched, what exposure it created), so the unauthorized period is accounted for before any decision about continuing it.",
       authority_check: check(
         "advisory_only",
         true,
@@ -310,7 +499,9 @@ function analyze(input: SurfaceInput): Analysis {
     actions.push({
       action: isRefunds
         ? "If limited front-line refund authority is actually wanted, grant it deliberately: amend the policy with a defined limit, criteria, and audit/spot-checking. That grant — not the past unauthorized practice — is what would make future approvals authorized."
-        : "If parallel sub-accounts are actually wanted, authorize them explicitly: defined count, permissions, and logging. That grant — not the agent's self-expansion — is what would make them authorized.",
+        : isSubAccounts
+          ? "If parallel sub-accounts are actually wanted, authorize them explicitly: defined count, permissions, and logging. That grant — not the agent's self-expansion — is what would make them authorized."
+          : "If the practice is actually wanted, authorize it explicitly: defined scope, limits, and logging, decided by you. That grant — not the past unauthorized practice and its outcomes — is what would make it authorized going forward.",
       authority_check: check(
         "sovereign_decision_required",
         false,
@@ -459,15 +650,46 @@ function analyze(input: SurfaceInput): Analysis {
     unknowns.push(
       "the underlying cause (injury, hunger, fear / fire source and spread) — to be established by acting and observing, not by delaying the protective action"
     );
+  if (contradiction)
+    unknowns.push(
+      `which of the record's two entries holds cannot be distinguished from this record: "${contradiction.earlier}" vs "${contradiction.later}" — the record contradicts itself and nothing else in it resolves the conflict`
+    );
+  if (rivalCandidates.length >= 2)
+    unknowns.push(
+      `which explanation holds cannot be distinguished from this record — it fits each of these recorded candidates and no entry tests or eliminates any of them: ${rivalCandidates
+        .map((c) => `"${c}"`)
+        .join(" / ")}`
+    );
+  if (staleRecord)
+    unknowns.push(
+      `the current state is not in the record: the newest evidence is dated ${staleRecord.newest}, ${staleRecord.ageDays} days before the question's stated present (${staleRecord.reference}), and no later state is recorded — the record is stale for a present-tense answer`
+    );
+  if (confoundQuote && coMovePair)
+    unknowns.push(
+      `whether ${coMovePair.factor} itself has any effect apart from the recorded confound cannot be distinguished from this record: "${confoundQuote}"`
+    );
+  if (unauthorizedMarker && actorAction && !/refund|sub-account/i.test(text))
+    unknowns.push(
+      "how far the practice has gone and what exposure it created — not fully stated",
+      "whether anyone with authority informally tolerated the practice (not stated)"
+    );
   if (unknowns.length === 0)
     unknowns.push("anything beyond the stated observations is not in evidence");
 
   // ----- position / history statements -----
-  const position_statement = urgent
+  const base_position_statement = urgent
     ? `Immediate situation: ${urgent_action}`
     : relations.length > 0 || regularities.length > 0
       ? `Current position, layers kept separate — observed: ${raw_quotes.join(" ")} | supported pattern: ${regularities.join(" ")} These are different epistemic objects and are not merged: the vivid single observation stays in raw, and only the stated regularity counts as pattern.`
       : `Current position from the observations as stated: ${raw_quotes.join(" ")}`;
+  // A composed record that contradicts itself or is stale has a
+  // position statement about the RECORD's state, not its content: the
+  // conflict / the staleness is the position.
+  const position_statement = contradiction
+    ? `Current position: the record contradicts itself on the point asked — "${contradiction.earlier}" vs "${contradiction.later}". Nothing else in the record resolves which entry holds, so the position is the conflict itself, not either side of it.`
+    : staleRecord
+      ? `Current position: the record's newest evidence is dated ${staleRecord.newest}, ${staleRecord.ageDays} days before the question's stated present (${staleRecord.reference}). What the record establishes is the state as of ${staleRecord.newest}; the present state is not in the record.`
+      : base_position_statement;
 
   const history_statement = `Observed sequence as given: ${raw_quotes.join(" → ")}. No steps beyond those stated are reconstructed.`;
 
@@ -483,12 +705,14 @@ function analyze(input: SurfaceInput): Analysis {
     position_statement,
     history_statement,
     uncertainty_signals: {
-      ambiguous_input: unknowns.length >= 3,
+      ambiguous_input: unknowns.length >= 3 || rivalCandidates.length >= 2,
       missing_context: input.sovereign_context === null,
       conflicting_signals:
         (hasMediaNarrative && hasLocalObservation) ||
-        (/bit three/i.test(text) && hasPercentTrend),
+        (/bit three/i.test(text) && hasPercentTrend) ||
+        contradiction !== null,
       sparse_history: !Array.isArray(ctx["timeline"]) || (ctx["timeline"] as unknown[]).length === 0,
+      stale_evidence: staleRecord !== null,
     },
   };
 }
