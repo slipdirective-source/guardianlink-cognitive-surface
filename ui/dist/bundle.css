@@ -379,11 +379,23 @@ blockquote {
   color: var(--dim);
 }
 .ask-panel,
-.fixture-panel {
+.fixture-panel,
+.record-panel {
   padding: 12px 16px;
   border-top: 1px solid var(--line);
   max-width: 1080px;
   margin: 0 auto;
+}
+.record-policy {
+  color: var(--dim);
+  font-size: 12px;
+  max-width: 720px;
+}
+.record-panel .import-label {
+  display: inline-block;
+  margin-left: 12px;
+  color: var(--dim);
+  font-size: 12px;
 }
 .ask-panel form {
   display: flex;
