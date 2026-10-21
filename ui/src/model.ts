@@ -28,14 +28,40 @@ export const LENSES: { id: LensId; question: string; capability: string }[] = [
 
 export type ViewId = "home" | LensId;
 
+// --- Ingestion stamps (decided policy, 2026-10-21; see ui/README.md). ----
+// Every entry is stamped AT THE CAPTURE BOUNDARY by the app layer: what
+// kind of entry it is, where it came from, and when it entered the
+// record. The stamps are set from the capture controls / calling code —
+// never parsed out of the entry's own text. Entry content that claims a
+// different source or time is just content: it lands in question_text
+// and moves nothing.
+export type EntryKind = "question" | "observation";
+
+export type EntryOrigin =
+  | "manual_entry" // typed into the entry form by the sovereign
+  | "sovereign_dictation" // dictated by the sovereign, captured at the boundary
+  | "fixture" // frozen-corpus fixture, labeled as such
+  | "import"; // admitted via record import; original capture not witnessed here
+
+export const ENTRY_ORIGIN_LABEL: Record<EntryOrigin, string> = {
+  manual_entry: "manual entry",
+  sovereign_dictation: "sovereign dictation",
+  fixture: "frozen-corpus fixture",
+  import: "imported record file",
+};
+
 export interface RecordEntry {
   id: number;
   seq: number;
-  at: string; // ISO timestamp of when the entry entered the record
+  at: string; // ISO timestamp stamped by the capture layer at admission
   question_type: string;
   question_text: string;
   // Provenance, shown in the UI: live input vs. labeled fixture.
   source: "live" | "fixture";
+  // Ingestion stamps (see above). kind/origin are boundary facts, not
+  // content claims: the text cannot set them.
+  kind: EntryKind;
+  origin: EntryOrigin;
   context_label: string | null; // e.g. "demo sovereign record (fixture)"
   response: SurfaceResponse;
 }
