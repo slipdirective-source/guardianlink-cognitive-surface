@@ -1199,6 +1199,12 @@
     { id: "trajectory", question: "Where am I going?", capability: "Trajectory" },
     { id: "agency", question: "What can I do about it?", capability: "Agency" }
   ];
+  var ENTRY_ORIGIN_LABEL = {
+    manual_entry: "manual entry",
+    sovereign_dictation: "sovereign dictation",
+    fixture: "frozen-corpus fixture",
+    import: "imported record file"
+  };
   function analysisViewOf(output) {
     const sig = output.signals;
     const traj = output.evidence.trajectory;
@@ -1374,7 +1380,7 @@
     ${urgent ? renderUrgent(urgent) : ""}
     <section class="now" data-section="position-now">
       <h1>You, now</h1>
-      <p class="entry-meta">#${entry.seq} \xB7 ${esc(entry.at)} \xB7 ${entry.source === "fixture" ? "frozen-corpus fixture" : "live input"}${entry.context_label ? ` \xB7 ${esc(entry.context_label)}` : ""}</p>
+      <p class="entry-meta">#${entry.seq} \xB7 ${esc(entry.at)} \xB7 ${esc(ENTRY_ORIGIN_LABEL[entry.origin] ?? entry.origin)} \xB7 ${esc(entry.kind)} \xB7 stamped at capture${entry.context_label ? ` \xB7 ${esc(entry.context_label)}` : ""}</p>
       <p class="question-text">${esc(entry.question_text)}</p>
       <p class="position-statement">${esc(r.output.summary)}</p>
     </section>
@@ -1490,7 +1496,7 @@
           <span class="rec-seq">#${e.seq}</span>
           <span class="rec-when">${esc(e.at)}</span>
           <span class="rec-q">${esc(e.question_text)}</span>
-          <span class="rec-meta">primary lens ${esc(e.response.cluster_id)} \xB7 uncertainty ${e.response.uncertainty.toFixed(2)}${urgent ? " \xB7 URGENT ACTION ON RECORD" : ""}</span>
+          <span class="rec-meta">primary lens ${esc(e.response.cluster_id)} \xB7 ${esc(e.kind)} \xB7 ${esc(ENTRY_ORIGIN_LABEL[e.origin] ?? e.origin)} \xB7 uncertainty ${e.response.uncertainty.toFixed(2)}${urgent ? " \xB7 URGENT ACTION ON RECORD" : ""}</span>
         </button>
       </li>`;
     }).join("");
@@ -1607,9 +1613,24 @@
   }
   function renderAskPanel() {
     return `<section class="ask-panel">
-    <h2>Put a question to the record</h2>
+    <h2>Add to the record \u2014 the capture boundary</h2>
+    <p class="capture-policy">Source and time are stamped by this form when the entry is admitted \u2014
+    they are never taken from the entry's own text. An entry is a claim from its stamped source,
+    admitted to the raw layer only; what it supports beyond that is the pipeline's work, not ingestion's.</p>
     <form id="ask-form">
-      <label>Lens (question type)
+      <label>Entry kind
+        <select name="entry_kind">
+          <option value="question">Question \u2014 put to a lens</option>
+          <option value="observation">Observation \u2014 a statement, recorded as position evidence</option>
+        </select>
+      </label>
+      <label>Source (stamped at capture)
+        <select name="entry_origin">
+          <option value="manual_entry">Manual entry \u2014 typed by the sovereign</option>
+          <option value="sovereign_dictation">Sovereign dictation \u2014 spoken by the sovereign</option>
+        </select>
+      </label>
+      <label>Lens (for questions)
         <select name="qtype">
           <option value="position">Where am I?</option>
           <option value="history">How did I get here?</option>
@@ -1618,11 +1639,11 @@
           <option value="agency">What can I do about it?</option>
         </select>
       </label>
-      <label>Question
-        <input name="qtext" type="text" autocomplete="off" placeholder="State the situation or question, in your own words" />
+      <label>Entry text
+        <input name="qtext" type="text" autocomplete="off" placeholder="The observation or question, in your own words" />
       </label>
       <label class="demo-toggle"><input name="demo_context" type="checkbox" /> attach the demo sovereign record (fixture) as context</label>
-      <button type="submit">Answer \u2014 through the pipeline</button>
+      <button type="submit">Record entry \u2014 through the pipeline</button>
     </form>
   </section>`;
   }
@@ -1754,6 +1775,8 @@
         question_type: type,
         question_text: text,
         source: opts.source ?? "live",
+        kind: opts.kind ?? "question",
+        origin: opts.origin ?? (opts.source === "fixture" ? "fixture" : "manual_entry"),
         context_label: opts.contextLabel ?? null,
         response
       };
@@ -1765,6 +1788,23 @@
       }
       this.render();
       return entry;
+    }
+    // The ingestion path: a typed submission from the capture layer.
+    // Source and timestamp are stamped HERE, at the boundary — the
+    // submission's text is content and is never consulted for them.
+    // Both kinds flow through answer() identically; an observation is a
+    // statement admitted as position evidence (the position lens reads
+    // "where am I?" over the stated fact), a question is put to its lens.
+    submitEntry(sub) {
+      const text = sub.text.trim();
+      if (!text) throw new Error("entry text is empty");
+      const type = sub.kind === "observation" ? "position" : sub.questionType ?? "position";
+      return this.ask(text, type, {
+        kind: sub.kind,
+        origin: sub.origin,
+        sovereignContext: sub.sovereignContext ?? null,
+        contextLabel: sub.contextLabel ?? null
+      });
     }
     loadFixture(caseId) {
       const f = CORPUS_FIXTURES.find((c) => c.case_id === caseId);
@@ -1803,6 +1843,10 @@
         }
       }
       const entries = parsed.entries;
+      for (const e of entries) {
+        if (e.origin === void 0) e.origin = "import";
+        if (e.kind === void 0) e.kind = "question";
+      }
       this.entries = entries;
       this.selectedId = entries.length ? entries[entries.length - 1].id : null;
       this.nextSeq = entries.reduce((m, e) => Math.max(m, e.seq), 0) + 1;
@@ -1891,9 +1935,15 @@
         const data = new FormData(form);
         const text = String(data.get("qtext") ?? "").trim();
         if (!text) return;
-        const type = String(data.get("qtype") ?? "position");
+        const kind = String(data.get("entry_kind") ?? "question") === "observation" ? "observation" : "question";
+        const originRaw = String(data.get("entry_origin") ?? "manual_entry");
+        const origin = originRaw === "sovereign_dictation" ? "sovereign_dictation" : "manual_entry";
         const demo = data.get("demo_context") === "on";
-        this.ask(text, type, {
+        this.submitEntry({
+          kind,
+          text,
+          questionType: String(data.get("qtype") ?? "position"),
+          origin,
           sovereignContext: demo ? DEMO_SOVEREIGN_CONTEXT : null,
           contextLabel: demo ? DEMO_CONTEXT_LABEL : null
         });
