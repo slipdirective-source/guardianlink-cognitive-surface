@@ -1,0 +1,68 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`item 5: relationship-class visual weights are pinned rendered cards for all four classes match the pinned snapshot (semantic hooks): relationship-card-hooks 1`] = `
+[
+  {
+    "cls": "rel-card",
+    "rel_weight": "1",
+    "relationship_class": "observed_sequence",
+    "tag": "article",
+  },
+  {
+    "cls": "rel-card",
+    "rel_weight": "2",
+    "relationship_class": "statistical_association",
+    "tag": "article",
+  },
+  {
+    "cls": "rel-card",
+    "rel_weight": "3",
+    "relationship_class": "candidate_causal",
+    "tag": "article",
+  },
+  {
+    "cls": "rel-card",
+    "rel_weight": "4",
+    "relationship_class": "demonstrated_intervention",
+    "tag": "article",
+  },
+]
+`;
+
+exports[`item 5: relationship-class visual weights are pinned rendered cards for all four classes match the pinned snapshot (semantic hooks): relationship-cards-html 1`] = `
+"<div class="relations">
+    <article class="rel-card" data-relationship-class="observed_sequence" data-rel-weight="1">
+          <div class="rel-head">
+            <span class="rel-class">observed_sequence</span>
+            <span class="rel-weight">evidential weight 1/4 — observed_sequence — X occurred, Y followed</span>
+          </div>
+          <p class="rel-claim">X affects Y</p>
+          <p class="rel-just">Basis: j</p>
+          <blockquote class="rel-evidence">q</blockquote>
+        </article><article class="rel-card" data-relationship-class="statistical_association" data-rel-weight="2">
+          <div class="rel-head">
+            <span class="rel-class">statistical_association</span>
+            <span class="rel-weight">evidential weight 2/4 — statistical_association — X and Y move together</span>
+          </div>
+          <p class="rel-claim">X affects Y</p>
+          <p class="rel-just">Basis: j</p>
+          <blockquote class="rel-evidence">q</blockquote>
+        </article><article class="rel-card" data-relationship-class="candidate_causal" data-rel-weight="3">
+          <div class="rel-head">
+            <span class="rel-class">candidate_causal</span>
+            <span class="rel-weight">evidential weight 3/4 — candidate_causal — changing X may affect Y</span>
+          </div>
+          <p class="rel-claim">X affects Y</p>
+          <p class="rel-just">Basis: j</p>
+          <blockquote class="rel-evidence">q</blockquote>
+        </article><article class="rel-card" data-relationship-class="demonstrated_intervention" data-rel-weight="4">
+          <div class="rel-head">
+            <span class="rel-class">demonstrated_intervention</span>
+            <span class="rel-weight">evidential weight 4/4 — demonstrated_intervention — X was changed, Y changed under comparable conditions</span>
+          </div>
+          <p class="rel-claim">X affects Y</p>
+          <p class="rel-just">Basis: j</p>
+          <blockquote class="rel-evidence">q</blockquote>
+        </article>
+  </div>"
+`;
