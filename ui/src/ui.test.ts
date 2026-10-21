@@ -140,6 +140,30 @@ describe("relationship classes render with distinct, ordered weight", () => {
   });
 });
 
+// Structural form of the gate guarantee (hardening pass, 2026-10-21):
+// a gated action node must contain NO interactive affordance at all —
+// not merely no <button>. The app delegates every click from a single
+// root listener keyed on [data-action], so the gated subtree must also
+// carry no delegation hook, and a click dispatched anywhere inside it
+// (which bubbles to that listener) must change nothing.
+const INTERACTIVE_SELECTOR =
+  'button, a[href], [role="button"], [tabindex], input, select, textarea, [contenteditable="true"]';
+
+function expectNoAffordance(node: Element) {
+  const subtree = [node, ...node.querySelectorAll("*")];
+  for (const el of subtree) {
+    expect(el.matches(INTERACTIVE_SELECTOR)).toBe(false);
+    expect((el as HTMLElement).tabIndex).toBe(-1); // nothing focusable
+    // no delegation hook: the root click handler reads dataset.action,
+    // view, entryId, layerKey, caseId via closest("[data-action]")
+    expect(el.hasAttribute("data-action")).toBe(false);
+    for (const attr of [...el.attributes]) {
+      expect(attr.name.startsWith("on")).toBe(false); // no inline handlers
+    }
+  }
+  expect(node.querySelector(INTERACTIVE_SELECTOR)).toBeNull();
+}
+
 describe("agency: the assent gate is visible in the rendering", () => {
   test("3.1: sovereign_decision_required is not executable and has no button; unauthorized is flagged", () => {
     const { root, app } = setup();
@@ -157,6 +181,37 @@ describe("agency: the assent gate is visible in the rendering", () => {
     expect(un.textContent).toContain("FLAGGED");
     // no action anywhere in the agency view is a one-click control
     expect(root.querySelectorAll(".action button").length).toBe(0);
+  });
+
+  test("3.1 structural: gated and flagged actions contain no interactive affordance and clicks inside them change nothing", () => {
+    const { root, app } = setup();
+    app.loadFixture("3.1");
+    app.setView("agency");
+    for (const basis of ["sovereign_decision_required", "unauthorized"]) {
+      const node = root.querySelector(`[data-authority-basis="${basis}"]`)!;
+      expect(node).not.toBeNull();
+      expectNoAffordance(node);
+    }
+    // Delegated-click simulation: dispatch bubbling clicks on the gated
+    // node and every descendant; the app state and the rendered DOM
+    // must be exactly unchanged (no execution, no re-render effect).
+    const gated = root.querySelector('[data-authority-basis="sovereign_decision_required"]')!;
+    const targets = [gated, ...gated.querySelectorAll("*")];
+    const htmlBefore = root.innerHTML;
+    const stateBefore = {
+      entries: app.entries.length,
+      view: app.view,
+      selected: app.selected?.id,
+      patternExpanded: app.isExpanded(`${app.selected!.id}:agency:pattern`),
+    };
+    for (const t of targets) {
+      t.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    }
+    expect(app.entries.length).toBe(stateBefore.entries);
+    expect(app.view).toBe(stateBefore.view);
+    expect(app.selected?.id).toBe(stateBefore.selected);
+    expect(app.isExpanded(`${app.selected!.id}:agency:pattern`)).toBe(stateBefore.patternExpanded);
+    expect(root.innerHTML).toBe(htmlBefore);
   });
 });
 
