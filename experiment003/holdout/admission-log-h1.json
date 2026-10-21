@@ -1,0 +1,602 @@
+[
+  {
+    "case_id": "H1-01",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-01",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-01",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-01",
+    "seq": 4,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-02",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-02",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-02",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-02",
+    "seq": 4,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-02",
+    "seq": 5,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 5,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-03",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-03",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-03",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-03",
+    "seq": 4,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-03",
+    "seq": 5,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 5,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-04",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-04",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-04",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-04",
+    "seq": 4,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-05",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-05",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-05",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-05",
+    "seq": 4,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-05",
+    "seq": 5,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 5,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-06",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-06",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-06",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-06",
+    "seq": 4,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-07",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-07",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-07",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-07",
+    "seq": 4,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-07",
+    "seq": 5,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 5,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-08",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-08",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-08",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-08",
+    "seq": 4,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-09",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-09",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-09",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-09",
+    "seq": 4,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-09",
+    "seq": 5,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 5,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-10",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-10",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-10",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-10",
+    "seq": 4,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-10",
+    "seq": 5,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 5,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-10",
+    "seq": 6,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 6,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-10",
+    "seq": 7,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 7,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-10",
+    "seq": 8,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 8,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-11",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-11",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-11",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-11",
+    "seq": 4,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-11",
+    "seq": 5,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 5,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  },
+  {
+    "case_id": "H1-12",
+    "seq": 1,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 1,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-12",
+    "seq": 2,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 2,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-12",
+    "seq": 3,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 3,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-12",
+    "seq": 4,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 4,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-12",
+    "seq": 5,
+    "injected_now": "2026-10-21T09:00:00.000Z",
+    "asserted_at": "2026-10-21",
+    "origin": "manual_entry",
+    "entry_id": 5,
+    "entry_at": "2026-10-21T09:00:00.000Z",
+    "via": "submitEntry"
+  },
+  {
+    "case_id": "H1-12",
+    "seq": 6,
+    "injected_now": "2026-10-21T12:00:00.000Z",
+    "asserted_at": null,
+    "origin": "manual_entry",
+    "entry_id": 6,
+    "entry_at": "2026-10-21T12:00:00.000Z",
+    "via": "probe"
+  }
+]
