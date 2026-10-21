@@ -59,6 +59,37 @@ npm run smoke:ui     # jsdom: boots the bundle, loads fixture 5.1, switches lens
   cannot distinguish (unknowns), lacks evidence (incl. the explicit
   trajectory null reason).
 
+## Record persistence — decided policy (2026-10-21)
+
+**Decision:** the record lives **in memory only**. Persistence happens
+exclusively through explicit, user-invoked **export** (download the
+record as a JSON file) and **import** (load a previously exported
+file). The app writes **nothing** to `localStorage`, `sessionStorage`,
+or IndexedDB, at any point.
+
+**Rationale:** the timeline is longitudinal personal data. Silent
+browser persistence would keep that data alive outside any deliberate
+act of the sovereign — a policy-enforcement gap outside the fail-closed
+story this system is built on. If the record is to survive a reload,
+carrying it across is an act, not an accident: the user exports it,
+holds the file, and imports it. Reloading without importing starts
+empty, and that emptiness is the correct default.
+
+**Mechanics:** the export envelope is
+`{format: "guardianlink-cognitive-surface/record", version: 1, entries}`
+— a pure function of the record, so export → import → export is
+byte-identical. Import validates the envelope and every entry's shape
+before applying anything; a malformed file changes nothing. (The live
+pipeline response also embeds cluster objects with functions in
+`ranked_clusters`; the export is the record's data projection —
+rendering consumes only data fields.)
+
+_Docket: front-end hardening pass, board docket (Claude) via Caleb,
+2026-10-21. The same pass added: the structural no-affordance test for
+gated agency actions, the record-content injection tests, the
+presentation-purity differential tests, and the snapshot pin on
+relationship-class visual weights (see `ui/src/hardening.test.ts`)._
+
 ## Tests
 
 `npm test` runs two Jest projects: `pipeline` (src/, node) and `ui`
@@ -69,7 +100,14 @@ strictly ordered, assent-required actions are non-executable and
 buttonless, the uncertainty panel carries all five states with the
 cross-cut value, urgent action leads the home view for both Category 5
 fixtures, and a novel live question renders output byte-identical to a
-direct `answer()` call.
+direct `answer()` call. A second suite (`ui/src/hardening.test.ts`)
+pins the hardening properties: gated actions contain no interactive
+affordance at all (and clicks inside them change nothing), hostile
+strings in any rendered field stay inert and verbatim, single-field
+mutations of a response change the render only where that field is
+projected, the record never touches browser storage and round-trips
+byte-identically through export/import, and the relationship-class
+visual weights are snapshot-pinned.
 
 CI runs `npx tsc --noEmit` (pipeline), `npm test` (both projects),
 `npx tsc -p tsconfig.ui.json --noEmit`, and `npm run build:ui`.
