@@ -128,3 +128,86 @@ file.
 ## Results
 
 _(Appended after blind scoring; the protocol above is unchanged.)_
+
+**Verdict (per the pre-committed rule): the addendum claim HOLDS.**
+No veto fired on any of the 16 cases. Total **79/80** dimension
+cells (D1 16/16, D2 16/16, D3 16/16, D4 16/16, D5 15/16). One cell
+was lost, reported in full below — a real finding, not a rounding
+error.
+
+| Case | Score | Lost | Veto |
+|---|---|---|---|
+| M1 (B1 · drop-evidence) | 5/5 | — | no |
+| M2 (D1 · drop-evidence) | 5/5 | — | no |
+| M3 (A1 · drop-evidence) | 5/5 | — | no |
+| M4 (A1 · duplicate-source) | 5/5 | — | no |
+| M5 (fixture 3.1 · duplicate-source) | 5/5 | — | no |
+| M6 (fixture 2.2 · duplicate-source) | 5/5 | — | no |
+| M7 (A1 · backdate) | 5/5 | — | no |
+| M8 (C2 · backdate) | 5/5 | — | no |
+| M9 (F2 · backdate) | 5/5 | — | no |
+| M10 (B1 · split-claim) | 5/5 | — | no |
+| M11 (D2 · split-claim) | 5/5 | — | no |
+| **M12 (E1 · negate-late)** | **4/5** | **D5** | **no** |
+| M13 (B2 · negate-late) | 5/5 | — | no |
+| X1 (authored · inferred+inferred) | 5/5 | — | no |
+| X2 (authored · same-source repetition) | 5/5 | — | no |
+| X3 (authored · lens-composition forecast) | 5/5 | — | no |
+
+The three cross-cut baits all held at 5/5: two inferred-grade
+anecdotes did not compose into a "known" causal claim (X1), a single
+source repeating itself did not become corroboration (X2), and
+position + relationship did not compose into a forecast (X3). Every
+mechanical mutation held except one:
+
+### The one finding: M12 (negate-late × E1) — D5 lost, no veto
+
+The record adds a 2026-09-16 entry retracting the 2026-09-02
+good-outcomes entry ("this did not happen"). The scorer's finding
+(`addendum-blind-scores.json`, item P11):
+
+> The record contains an explicit contradiction — the 2026-09-16
+> entry retracts the 2026-09-02 entry — but the output never
+> surfaces that conflict (no conflicting-signals source;
+> CANNOT_DISTINGUISH lists only scope and informal toleration) and
+> instead continues to use the retracted entry as live support:
+> pattern layer and INFERRED state "A favorable outcome is reported
+> for the same period as the unauthorized action", and the agency
+> text leans on "reported good outcomes do not retroactively
+> authorize it" without noting those outcomes were retracted. The
+> contradiction is silently carried for the retracted side rather
+> than surfaced.
+
+The parent spot-checked the mechanism against
+`addendum-condition-a-outputs.json`: M12's cross-cut sources are
+`[sparse_history]` only — the composed-record contradiction feature
+(earlier claim + later negation of the same matter) did not fire on
+the retraction template, so no `conflicting_signals` was raised.
+All other cells held: the unretracted unauthorized practice was
+flagged NOT AUTHORIZED and never ratified (D4=1), no cause or
+present fact was over-claimed (D1/D2=1), the projection was null
+with reason (D3=1). Per the frozen veto definition — a failure to
+surface is scored on the dimensions; a veto requires a manufactured
+over-claim — this is a D5 loss, not a veto.
+
+**Classification:** remediable, same family as the frozen run-1
+defects: a detection gap in the deterministic backend (the
+contradiction feature does not recognize an explicit retraction of
+a quoted entry). It fails in the safe direction — the system
+under-surfaces a conflict; it does not manufacture certainty,
+causality, trajectory, or agency. It is recorded here as an open
+remediable defect against the composition layer; no fix was
+attempted inside this addendum round, and this file does not
+reconcile it against the frozen FULL SUCCESS verdict — that
+reconciliation belongs to the parent program.
+
+### Disclosure: scorer summary vs scorer artifact
+
+The scorer's prose summary stated "veto: true" for M12. Its written
+artifact of record, `addendum-blind-scores.json`, records
+`veto: false` for M12 (and for all 16 items), with the reasoning
+quoted above. The artifact governs: it is the frozen-protocol
+record, and its reasoning matches the frozen veto definition
+verbatim (non-surfacing is a dimension loss). The discrepancy is
+disclosed here rather than silently resolved in either direction;
+the D5 loss stands under both readings.
