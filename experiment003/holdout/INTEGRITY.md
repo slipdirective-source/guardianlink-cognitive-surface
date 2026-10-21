@@ -18,9 +18,13 @@ Caleb had seen the doc) was withdrawn and is superseded by this record.
   382fb919f17a5465dacb560fd2ef96bd3c2bfe4d1948377f51d9b41dd6378a92
 - System-under-test commit: b5fa86ea7e (remote head of guardianlink-cognitive-surface
   at freeze; hosted CI completed/success on this commit).
-- Evaluation code commit: the freeze commit adding experiment003/holdout/ (this
-  record, the mapping, both as-authored slices, the runner). Recorded in the repo
-  at commit time.
+- Evaluation code commit: the freeze series adding experiment003/holdout/ (this
+  record, the mapping, both as-authored slices, the runner) completes at commit
+  b393d94adcfad10dff76f3dec21ebaaa881dba80 (files landed as individual
+  Contents-API commits; that head is the frozen evaluation state). Step-0
+  verification at the freeze boundary (2026-10-21): both slice files recomputed
+  to their section-1 pins exactly; all 34 files under src/ and ui/src/
+  byte-identical to b5fa86ea7e.
 - Evaluator: independent blind scorer agent(s), one per slice, keys withheld.
 - Results from H and H1 are reported separately and never pooled.
 
