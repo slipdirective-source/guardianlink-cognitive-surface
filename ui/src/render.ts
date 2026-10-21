@@ -17,6 +17,7 @@ import { ClusterOutput, SurfaceResponse } from "../../src/types";
 import { AssertedRelation, CandidateAction } from "../../src/reasoner";
 import {
   AnalysisView,
+  CHAIN_STATUS_LABEL,
   ENTRY_ORIGIN_LABEL,
   LENSES,
   LensId,
@@ -32,6 +33,7 @@ import {
   lensOutputOf,
   primaryView,
   urgentActionOf,
+  verifyChain,
 } from "./model";
 
 export interface RenderState {
@@ -81,17 +83,18 @@ export function renderApp(state: RenderState): string {
   </main>
   ${renderAskPanel()}
   ${renderFixturePanel()}
-  ${renderRecordPanel()}`;
+  ${renderRecordPanel(verifyChain(state.entries))}`;
 }
 
 // Record persistence is explicit-only (decided policy, see ui/README.md):
 // the record lives in memory; export downloads it as a JSON file, import
 // loads such a file back. No ambient browser storage is used anywhere.
-function renderRecordPanel(): string {
+function renderRecordPanel(status: ReturnType<typeof verifyChain>): string {
   return `<section class="record-panel">
     <h2>The record — persistence is explicit, never ambient</h2>
     <p class="record-policy">This record lives in memory only. It is not written to browser storage.
     Export downloads it as a JSON file; import loads a file you exported. Reloading without importing starts empty.</p>
+    <p class="chain-status">Tamper evidence: <span data-chain-status="${esc(status)}">${esc(CHAIN_STATUS_LABEL[status])}</span></p>
     <button data-action="export-record">Export record (JSON download)</button>
     <label class="import-label">Import a record export
       <input type="file" data-import-file accept="application/json,.json" />
@@ -238,11 +241,11 @@ function renderLens(state: RenderState, entry: RecordEntry, lens: LensId): strin
       : `<p>No candidate actions emitted by the agency lens for this entry.</p>`;
   } else if (lens === "trajectory") {
     specific = view.projection
-      ? `<div class="projection" data-trajectory="projection"><h3>Projection — distinct from observation</h3>
+      ? `<div class="projection" data-trajectory="projection" aria-label="Trajectory: a projection is stated, distinct from observation"><h3>Projection — distinct from observation</h3>
            <p>${esc(view.projection.statement)}</p>
            <p>Assumptions: ${esc(view.projection.assumptions.join("; "))}</p>
            <p>Confidence: ${view.projection.confidence}</p></div>`
-      : `<div class="projection" data-trajectory="null"><h3>No projection</h3>
+      : `<div class="projection" data-trajectory="null" aria-label="Trajectory: no projection — the record does not support one"><h3>No projection</h3>
            <p>${esc(view.trajectory_null_reason ?? "The record does not support one.")}</p>
            <p>The observations describe where things ARE; they are not a forecast.</p></div>`;
   } else if (lens === "history") {
@@ -304,7 +307,7 @@ export function renderRelations(relations: AssertedRelation[]): string {
         // its own label — it never throws and never gains weight.
         const w = RELATIONSHIP_WEIGHT[rel.relationship_class] ?? 1;
         const label = RELATIONSHIP_CLASS_LABEL[rel.relationship_class] ?? rel.relationship_class;
-        return `<article class="rel-card" data-relationship-class="${esc(rel.relationship_class)}" data-rel-weight="${w}">
+        return `<article class="rel-card" data-relationship-class="${esc(rel.relationship_class)}" data-rel-weight="${w}" aria-label="Relationship class ${esc(rel.relationship_class)}, evidential weight ${w} of 4 — ${esc(label)}">
           <div class="rel-head">
             <span class="rel-class">${esc(rel.relationship_class)}</span>
             <span class="rel-weight">evidential weight ${w}/4 — ${esc(label)}</span>
@@ -325,7 +328,7 @@ export function renderActions(actions: CandidateAction[], title: string): string
       .map((a) => {
         const p = authorityPresentation(a);
         const check = a.authority_check;
-        return `<div class="action" data-gate="${p.gate}" data-executable="${p.executable}" data-authority-basis="${esc(check?.basis ?? "none")}">
+        return `<div class="action" data-gate="${p.gate}" data-executable="${p.executable}" data-authority-basis="${esc(check?.basis ?? "none")}" aria-label="Action gate state: ${esc(p.label)}">
           <p class="action-text">${esc(a.action)}</p>
           <p class="action-gate">${esc(p.label)}</p>
           ${check ? `<p class="action-note">Authority check — basis: ${esc(check.basis)}; authorized: ${check.authorized}; requires assent: ${check.requires_assent}. ${esc(check.note)}</p>` : ""}
@@ -349,7 +352,7 @@ export function renderUncertaintyPanel(response: SurfaceResponse): string {
     ${order
       .map((s) => {
         const items = ev.states[s];
-        return `<div class="epistemic" data-uncertainty-state="${s}">
+        return `<div class="epistemic" data-uncertainty-state="${s}" aria-label="Uncertainty state: ${esc(UNCERTAINTY_STATE_LABEL[s])}">
           <h3>${esc(UNCERTAINTY_STATE_LABEL[s])}</h3>
           ${
             items.length
