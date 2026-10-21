@@ -4,7 +4,7 @@
 // what "lenses, not tabs" means mechanically.
 
 import { answer } from "../../src/surface";
-import { LensId, RecordEntry, ViewId } from "./model";
+import { EntryKind, EntryOrigin, LensId, RecordEntry, ViewId } from "./model";
 import { esc, layerKey, renderApp } from "./render";
 import {
   CORPUS_FIXTURES,
@@ -16,6 +16,22 @@ export interface AskOptions {
   sovereignContext?: Record<string, unknown> | null;
   contextLabel?: string | null;
   source?: "live" | "fixture";
+  // Ingestion stamps, set by the capture path (see model.ts). Callers
+  // pass the boundary facts; the entry text plays no part in them.
+  kind?: EntryKind;
+  origin?: EntryOrigin;
+}
+
+export interface EntrySubmission {
+  kind: EntryKind;
+  text: string;
+  // For kind "question": the lens the question is put to. Ignored for
+  // observations (an observation is admitted as position evidence).
+  questionType?: string;
+  // The capture source, chosen at the boundary (form control or caller).
+  origin: EntryOrigin;
+  sovereignContext?: Record<string, unknown> | null;
+  contextLabel?: string | null;
 }
 
 // --- Record persistence policy (decided 2026-10-21, board docket via
@@ -66,6 +82,8 @@ export class SurfaceApp {
       question_type: type,
       question_text: text,
       source: opts.source ?? "live",
+      kind: opts.kind ?? "question",
+      origin: opts.origin ?? (opts.source === "fixture" ? "fixture" : "manual_entry"),
       context_label: opts.contextLabel ?? null,
       response,
     };
@@ -78,6 +96,24 @@ export class SurfaceApp {
     }
     this.render();
     return entry;
+  }
+
+  // The ingestion path: a typed submission from the capture layer.
+  // Source and timestamp are stamped HERE, at the boundary — the
+  // submission's text is content and is never consulted for them.
+  // Both kinds flow through answer() identically; an observation is a
+  // statement admitted as position evidence (the position lens reads
+  // "where am I?" over the stated fact), a question is put to its lens.
+  submitEntry(sub: EntrySubmission): RecordEntry {
+    const text = sub.text.trim();
+    if (!text) throw new Error("entry text is empty");
+    const type = sub.kind === "observation" ? "position" : sub.questionType ?? "position";
+    return this.ask(text, type, {
+      kind: sub.kind,
+      origin: sub.origin,
+      sovereignContext: sub.sovereignContext ?? null,
+      contextLabel: sub.contextLabel ?? null,
+    });
   }
 
   loadFixture(caseId: string): RecordEntry {
@@ -130,6 +166,15 @@ export class SurfaceApp {
       }
     }
     const entries = parsed.entries as RecordEntry[];
+    // Entries from older exports may predate the ingestion stamps. An
+    // entry without stamps was not witnessed at a capture boundary
+    // here, so import stamps it for what it is: admitted via import,
+    // as a question. Entries that carry their stamps keep them — the
+    // stamp is part of the entry, not of the file it traveled in.
+    for (const e of entries) {
+      if (e.origin === undefined) e.origin = "import";
+      if (e.kind === undefined) e.kind = "question";
+    }
     this.entries = entries;
     this.selectedId = entries.length ? entries[entries.length - 1].id : null;
     this.nextSeq = entries.reduce((m, e) => Math.max(m, e.seq), 0) + 1;
@@ -228,9 +273,21 @@ export class SurfaceApp {
       const data = new FormData(form);
       const text = String(data.get("qtext") ?? "").trim();
       if (!text) return;
-      const type = String(data.get("qtype") ?? "position");
+      // The capture boundary: kind and origin come from the form's own
+      // controls (the sovereign's selections at capture time), the
+      // timestamp is stamped in ask(). The text is content only.
+      const kind = (String(data.get("entry_kind") ?? "question") === "observation"
+        ? "observation"
+        : "question") as EntryKind;
+      const originRaw = String(data.get("entry_origin") ?? "manual_entry");
+      const origin: EntryOrigin =
+        originRaw === "sovereign_dictation" ? "sovereign_dictation" : "manual_entry";
       const demo = data.get("demo_context") === "on";
-      this.ask(text, type, {
+      this.submitEntry({
+        kind,
+        text,
+        questionType: String(data.get("qtype") ?? "position"),
+        origin,
         sovereignContext: demo ? DEMO_SOVEREIGN_CONTEXT : null,
         contextLabel: demo ? DEMO_CONTEXT_LABEL : null,
       });
