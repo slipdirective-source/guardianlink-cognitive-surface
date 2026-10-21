@@ -59,14 +59,25 @@ export function crossCutUncertainty(outputs: ClusterOutput[]): {
   );
   const hasNullTrajectory = anySignals.some((s) => s["trajectory_null_reason"]);
   const hasUrgent = anySignals.some((s) => s["urgent_action"]);
+  // Analysis-level signals recorded by the reasoner on each output:
+  // a record that contradicts itself and a record whose evidence is
+  // stale relative to the question are cross-cut sources, derived from
+  // the outputs (Experiment 003) — not re-guessed here.
+  const analysisSignals = anySignals.map(
+    (s) => (s["analysis_signals"] as Record<string, unknown> | undefined) ?? {}
+  );
+  const hasConflict = analysisSignals.some((s) => s["conflicting_signals"] === true);
+  const hasStale = analysisSignals.some((s) => s["stale_evidence"] === true);
 
   const sources = uncertaintySources({
     ambiguous_input: unknownsCount >= 3,
     missing_context: outputs.some((o) => o.evidence.raw.sovereign_context === null),
-    conflicting_signals: false,
+    conflicting_signals: hasConflict,
     low_confidence_tokens: false,
     sparse_history: hasNullTrajectory,
   });
+  if (hasStale)
+    sources.push({ name: "stale_record_evidence", weight: 0.2, value: 0.7 });
   // An urgent, obvious action is NOT uncertain even when its causes are:
   // the cross-cut must not manufacture hesitation on Category 5 inputs.
   if (hasUrgent) return { value: Math.min(mean, 0.2), sources };
