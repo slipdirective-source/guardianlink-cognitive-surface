@@ -148,7 +148,13 @@ describe("the form is the capture boundary", () => {
 });
 
 describe("legacy imports are stamped honestly", () => {
-  test("an entry without stamps is stamped origin=import on admission; stamped entries keep theirs", () => {
+  // NAMED CHANGE (board round 2, Fix A — import provenance
+  // downgrade): this test previously asserted that an entry carrying
+  // stamps keeps them as its effective stamps. That was the defect:
+  // stamps in a file are claims by the file, not witnessed here.
+  // Now every imported entry's effective origin is "import", and
+  // carried stamps are preserved as claimed provenance.
+  test("an entry without stamps is stamped origin=import on admission; carried stamps are preserved as claims, not as effective stamps", () => {
     const { app } = setup();
     app.submitEntry({ kind: "observation", text: "A witnessed entry.", origin: "manual_entry" });
     // This scenario is a LEGACY (v1) file: pre-stamp, pre-chain.
@@ -172,9 +178,17 @@ describe("legacy imports are stamped honestly", () => {
     app2.importRecord(JSON.stringify(exported));
     const kept = app2.entries.find((e) => e.seq === 1)!;
     const admitted = app2.entries.find((e) => e.seq === 99)!;
-    expect(kept.origin).toBe("manual_entry");
+    // The stamped entry: effective origin downgraded to the witnessed
+    // event (the import); its file stamps survive as claims only.
+    expect(kept.origin).toBe("import");
+    expect(kept.claimed_origin).toBe("manual_entry");
+    expect(kept.claimed_at).toBe(kept.at);
     expect(kept.kind).toBe("observation");
+    expect(kept.claimed_kind).toBe("observation");
+    // The unstamped entry: nothing to claim; stamped for what it is.
     expect(admitted.origin).toBe("import");
     expect(admitted.kind).toBe("question");
+    expect(admitted.claimed_origin).toBeUndefined();
+    expect(admitted.claimed_kind).toBeUndefined();
   });
 });
