@@ -183,12 +183,12 @@ describe("trajectory states are distinguishable without styling", () => {
 });
 
 describe("chain status is text, not color", () => {
-  test("verified / legacy-unverified / broken have distinct text signatures", () => {
+  test("consistent / legacy-unverified / broken have distinct text signatures", () => {
     const { root, app } = setup();
     app.ask("My dog bit three people last month.", "relationships");
     const verified = root.querySelector("[data-chain-status]")!;
-    expect(verified.getAttribute("data-chain-status")).toBe("verified");
-    expect(text(verified)).toContain("verified");
+    expect(verified.getAttribute("data-chain-status")).toBe("consistent");
+    expect(text(verified)).toContain("consistent");
 
     app.entries[0].question_text = "tampered content";
     app.setView("home");
